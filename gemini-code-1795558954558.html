@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Willax TV - Santa Tracker 3D (Edición Diorama)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; }
+    body, html {
+      width: 100%; height: 100%; margin: 0; padding: 0;
+      overflow: hidden; background: #07223d;
+      font-family: 'Montserrat', sans-serif; user-select: none;
+    }
+    .font-hud { font-family: 'Orbitron', monospace; }
+    .tv-glass {
+      background: linear-gradient(135deg, rgba(8, 22, 42, 0.88) 0%, rgba(4, 12, 26, 0.94) 100%);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), inset 0 0 16px rgba(255, 255, 255, 0.05);
+    }
+    .glow-gold {
+      text-shadow: 0 0 14px rgba(251, 191, 36, 0.8), 0 0 28px rgba(245, 158, 11, 0.4);
+    }
+    #canvas-container {
+      position: absolute; inset: 0; width: 100vw; height: 100vh; z-index: 1;
+    }
+    .snow-dot {
+      position: absolute; background: rgba(255, 255, 255, 0.92);
+      border-radius: 50%; pointer-events: none;
+    }
+  </style>
+</head>
+<body class="w-full h-full text-white">
+
+  <div id="canvas-container"></div>
+  <div id="snow-overlay" class="fixed inset-0 pointer-events-none z-10 overflow-hidden"></div>
+
+  <!-- INTERFAZ BROADCAST TV WILLAX -->
+  <div id="hud-root" class="relative z-20 w-full h-full p-4 md:p-8 flex flex-col justify-between pointer-events-none transition-opacity duration-300">
+    
+    <!-- ENCABEZADO SUPERIOR -->
+    <header class="flex justify-between items-start w-full">
+      <div class="tv-glass rounded-2xl p-3 md:p-4 flex items-center space-x-3.5 pointer-events-auto border-t-2 border-red-500 shadow-2xl">
+        <!-- Logo Navideño PNG sobre base oscura para contraste con tipografía blanca -->
+        <div class="bg-slate-950/90 border border-white/15 px-3 py-1.5 rounded-xl flex items-center justify-center shadow-inner">
+          <img id="hud-logo-img" src="./logo-willax-navidad-1.png" alt="Willax Navidad" class="h-10 md:h-12 w-auto object-contain">
+        </div>
+
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider animate-pulse">
+              <span class="w-1.5 h-1.5 rounded-full bg-white"></span> EN VIVO
+            </span>
+            <span class="text-[11px] font-bold text-amber-300 uppercase tracking-widest">EDICIÓN ESPECIAL</span>
+          </div>
+          <h1 class="text-sm md:text-base font-extrabold uppercase tracking-wide text-white drop-shadow">
+            Santa Tracker Mundial
+          </h1>
+        </div>
+      </div>
+
+      <!-- Reloj Mundial & Switcher de Cámara -->
+      <div class="tv-glass rounded-2xl px-5 py-3 flex items-center space-x-5 pointer-events-auto border-t-2 border-sky-400">
+        <div>
+          <div class="text-[9px] font-extrabold uppercase tracking-widest text-sky-400">Hora Universal UTC</div>
+          <div id="hud-utc" class="text-lg md:text-xl font-hud font-bold text-white tracking-wider">00:00:00</div>
+        </div>
+
+        <div class="h-8 w-px bg-white/20"></div>
+
+        <div>
+          <div class="text-[9px] font-extrabold uppercase tracking-widest text-emerald-400">Cámara</div>
+          <div class="flex items-center space-x-1.5 mt-1">
+            <button id="cam-willax-btn" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500 text-black font-black shadow">
+              Plano TV
+            </button>
+            <button id="cam-northpole-btn" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-300">
+              Polo Norte
+            </button>
+            <button id="cam-tactical-btn" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-300">
+              Globo Libre
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- CUADROS LATERALES -->
+    <div class="w-full flex justify-between items-end my-auto pointer-events-none">
+      <!-- Panel Izquierdo -->
+      <div class="tv-glass rounded-2xl p-5 w-84 md:w-96 space-y-3.5 pointer-events-auto border-l-4 border-l-amber-400 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-white/10 pb-2">
+          <span class="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span> Próxima Parada
+          </span>
+          <span id="hud-stage-num" class="text-xs font-mono font-bold text-sky-300">PARADA 1 / 16</span>
+        </div>
+
+        <div>
+          <div id="hud-country" class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">NUEVA ZELANDA</div>
+          <div id="hud-city" class="text-3xl md:text-4xl font-black text-white tracking-wide glow-gold leading-tight">AUCKLAND</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="bg-black/50 border border-white/10 rounded-xl p-2.5">
+            <div class="text-[9px] font-bold text-gray-400 uppercase">Hora Local Destino</div>
+            <div id="hud-local-time" class="text-sm md:text-base font-hud font-bold text-sky-300">00:00:00</div>
+          </div>
+          <div class="bg-black/50 border border-white/10 rounded-xl p-2.5">
+            <div class="text-[9px] font-bold text-gray-400 uppercase">Llegada Medianoche</div>
+            <div id="hud-countdown" class="text-sm md:text-base font-hud font-bold text-amber-400">00:00:00</div>
+          </div>
+        </div>
+
+        <div class="bg-white/5 border border-white/10 rounded-xl p-2.5 text-xs space-y-1">
+          <div class="text-[9px] font-bold text-sky-400 uppercase tracking-wider">Corredor Aéreo Activo</div>
+          <div class="flex items-center justify-between text-gray-300 font-semibold">
+            <span id="corridor-prev" class="truncate max-w-[125px]">Salida: Kiritimati</span>
+            <span class="text-amber-400">➔</span>
+            <span id="corridor-next" class="text-white font-bold truncate max-w-[130px]">Sídney</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel Derecho -->
+      <div class="tv-glass rounded-2xl p-5 w-72 md:w-80 space-y-3 pointer-events-auto border-r-4 border-r-sky-400 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-white/10 pb-2">
+          <span class="text-xs font-black uppercase tracking-wider text-sky-300">Telemetría de Vuelo</span>
+          <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full font-bold">RADAR ACTIVO</span>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex justify-between items-center bg-black/40 p-2.5 rounded-xl border border-white/5">
+            <span class="text-[10px] font-bold text-gray-400 uppercase">Velocidad Terrestre</span>
+            <span id="hud-speed" class="font-hud font-black text-amber-300 text-sm">6,420 km/h</span>
+          </div>
+          <div class="flex justify-between items-center bg-black/40 p-2.5 rounded-xl border border-white/5">
+            <span class="text-[10px] font-bold text-gray-400 uppercase">Altitud Orbital</span>
+            <span class="font-hud font-black text-sky-300 text-sm">28,400 m</span>
+          </div>
+          <div class="flex justify-between items-center bg-black/40 p-2.5 rounded-xl border border-white/5">
+            <span class="text-[10px] font-bold text-gray-400 uppercase">Tracción de Renos</span>
+            <span class="font-bold text-rose-300 text-xs flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span> Rodolfo al 100%
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PIE DE PÁGINA -->
+    <footer class="w-full flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="tv-glass rounded-2xl px-6 py-3 flex items-center space-x-4 pointer-events-auto border-b-4 border-b-amber-400 shadow-2xl">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 text-black flex items-center justify-center text-2xl shadow font-black flex-shrink-0">
+          🎁
+        </div>
+        <div>
+          <div class="text-[10px] font-extrabold uppercase tracking-widest text-amber-300">Regalos Entregados en el Mundo</div>
+          <div id="hud-presents" class="text-2xl md:text-3xl font-hud font-black text-white tracking-wider glow-gold">
+            5,842,109,330
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Control OBS -->
+      <div class="tv-glass rounded-2xl p-2.5 flex items-center space-x-2 pointer-events-auto shadow-2xl">
+        <button id="ctrl-prev" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition text-white">⏮ Prev</button>
+        <button id="ctrl-play" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-black transition flex items-center gap-1.5 text-white">
+          <span id="play-symbol">⏸</span> Pausar
+        </button>
+        <button id="ctrl-next" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition text-white">Sig ⏭</button>
+
+        <div class="h-6 w-px bg-white/20 mx-1"></div>
+
+        <div class="flex items-center space-x-1">
+          <button data-speed="1" class="speed-opt px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-amber-400 text-black">1x</button>
+          <button data-speed="5" class="speed-opt px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-white/10 hover:bg-white/20 text-white">5x</button>
+          <button data-speed="25" class="speed-opt px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-white/10 hover:bg-white/20 text-white">25x</button>
+        </div>
+
+        <div class="h-6 w-px bg-white/20 mx-1"></div>
+
+        <button id="ctrl-audio" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition text-white flex items-center gap-1">
+          🔔 <span id="audio-state-text">Campanas Off</span>
+        </button>
+
+        <button id="ctrl-cinema" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-xs font-bold transition text-white">
+          🎥 Modo Cine
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <button id="btn-show-hud" class="fixed top-4 right-4 z-50 bg-black/85 hover:bg-black text-amber-300 border border-amber-400/50 rounded-xl px-3.5 py-2 text-xs font-bold hidden cursor-pointer shadow-2xl">
+    Restaurar HUD
+  </button>
+
+  <script>
+    /* =========================================================================
+       1. COORDENADAS GLOBALES
+       ========================================================================= */
+    const WAYPOINTS = [
+      { city: "KIRITIMATI", country: "KIRIBATI (UTC+14)", lat: 1.8721, lon: -157.3631, tzOffset: 14 },
+      { city: "AUCKLAND", country: "NUEVA ZELANDA (UTC+13)", lat: -36.8485, lon: 174.7633, tzOffset: 13 },
+      { city: "SÍDNEY", country: "AUSTRALIA (UTC+11)", lat: -33.8688, lon: 151.2093, tzOffset: 11 },
+      { city: "TOKIO", country: "JAPÓN (UTC+9)", lat: 35.6762, lon: 139.6503, tzOffset: 9 },
+      { city: "PEKÍN", country: "CHINA (UTC+8)", lat: 39.9042, lon: 116.4074, tzOffset: 8 },
+      { city: "BANGKOK", country: "TAILANDIA (UTC+7)", lat: 13.7563, lon: 100.5018, tzOffset: 7 },
+      { city: "NUEVA DELHI", country: "INDIA (UTC+5:30)", lat: 28.6139, lon: 77.2090, tzOffset: 5.5 },
+      { city: "DUBÁI", country: "EMIRATOS ÁRABES (UTC+4)", lat: 25.2048, lon: 55.2708, tzOffset: 4 },
+      { city: "ROMA", country: "ITALIA (UTC+1)", lat: 41.9028, lon: 12.4964, tzOffset: 1 },
+      { city: "PARÍS", country: "FRANCIA (UTC+1)", lat: 48.8566, lon: 2.3522, tzOffset: 1 },
+      { city: "LONDRES", country: "REINO UNIDO (UTC+0)", lat: 51.5074, lon: -0.1278, tzOffset: 0 },
+      { city: "RÍO DE JANEIRO", country: "BRASIL (UTC-3)", lat: -22.9068, lon: -43.1729, tzOffset: -3 },
+      { city: "BUENOS AIRES", country: "ARGENTINA (UTC-3)", lat: -34.6037, lon: -58.3816, tzOffset: -3 },
+      { city: "LIMA", country: "PERÚ (UTC-5)", lat: -12.0464, lon: -77.0428, tzOffset: -5 },
+      { city: "NUEVA YORK", country: "ESTADOS UNIDOS (UTC-5)", lat: 40.7128, lon: -74.0060, tzOffset: -5 },
+      { city: "HONOLULÚ", country: "HAWÁI (UTC-10)", lat: 21.3069, lon: -157.8583, tzOffset: -10 }
+    ];
+
+    const GLOBE_RADIUS = 5.0;
+
+    function latLonToVector3(lat, lon, radius) {
+      const phi = (90 - lat) * (Math.PI / 180);
+      const theta = (lon + 180) * (Math.PI / 180);
+      return new THREE.Vector3(
+        -(radius * Math.sin(phi) * Math.cos(theta)),
+        (radius * Math.cos(phi)),
+        (radius * Math.sin(phi) * Math.sin(theta))
+      );
+    }
+
+    /* =========================================================================
+       2. CARGA DE TEXTURA PNG DEL TRINEO (CON RESPALDO PROCEDURAL)
+       ========================================================================= */
+    function createFallbackWhiteLogo() {
+      const c = document.createElement('canvas');
+      c.width = 1024; c.height = 380;
+      const ctx = c.getContext('2d');
+      const colors = [
+        ['#e6222b', '#f05a28', '#fdb813', '#fff100'],
+        ['#e2068d', null, null, '#8dc63f'],
+        ['#a04299', null, null, '#00a859'],
+        ['#6b2c91', '#1b439b', '#0072bc', '#009444']
+      ];
+      const startX = 120, startY = 85, s = 48, gap = 4;
+      for (let r = 0; r < 4; r++) {
+        for (let col = 0; col < 4; col++) {
+          if (colors[r][col]) {
+            ctx.fillStyle = colors[r][col];
+            ctx.fillRect(startX + col*(s+gap), startY + r*(s+gap), s, s);
+          }
+        }
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 175px Montserrat, sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('willax', 370, 195);
+      return new THREE.CanvasTexture(c);
+    }
+
+    const texLoader = new THREE.TextureLoader();
+    let sleighLogoTexture = createFallbackWhiteLogo();
+    texLoader.load('./logo-willax-blanco.png', (loadedTex) => {
+      loadedTex.anisotropy = 16;
+      sleighLogoTexture.image = loadedTex.image;
+      sleighLogoTexture.needsUpdate = true;
+    });
+
+    // Textura rayada para poste de caramelo del Polo Norte
+    function createCandyCaneTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, 128, 256);
+      ctx.fillStyle = '#dc2626';
+      for (let y = -128; y < 384; y += 48) {
+        ctx.beginPath();
+        ctx.moveTo(0, y); ctx.lineTo(128, y + 64);
+        ctx.lineTo(128, y + 88); ctx.lineTo(0, y + 24);
+        ctx.closePath(); ctx.fill();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    /* =========================================================================
+       3. INICIALIZACIÓN ESCENA Y FONDO STUDIO POLIGONAL (COMO IMAGEN REF)
+       ========================================================================= */
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x062342);
+    scene.fog = new THREE.FogExp2(0x062342, 0.018);
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5.5, 13.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.minDistance = 6.5;
+    controls.maxDistance = 24;
+    controls.enabled = false;
+
+    // Iluminación suave tipo maqueta de estudio (Claymation)
+    const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x0c2d48, 0.95);
+    scene.add(hemiLight);
+
+    const keyLight = new THREE.DirectionalLight(0xfffbeb, 1.35);
+    keyLight.position.set(12, 18, 14);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.55);
+    fillLight.position.set(-14, 6, -10);
+    scene.add(fillLight);
+
+    // Fondo geométrico azul oscuro con puntos sutiles (igual al fondo de la imagen)
+    const bgDomeGeo = new THREE.IcosahedronGeometry(45, 3);
+    const bgDomeMat = new THREE.MeshStandardMaterial({
+      color: 0x07294d,
+      flatShading: true,
+      side: THREE.BackSide,
+      roughness: 0.9
+    });
+    scene.add(new THREE.Mesh(bgDomeGeo, bgDomeMat));
+
+    /* =========================================================================
+       4. GLOBO LOW-POLY + CONTINENTES EN RELIEVE + ALDEA DEL POLO NORTE
+       ========================================================================= */
+    const earthGroup = new THREE.Group();
+    scene.add(earthGroup);
+
+    // Océano facetado estilo maqueta azul celeste
+    const oceanGeo = new THREE.IcosahedronGeometry(GLOBE_RADIUS, 4);
+    const oceanMat = new THREE.MeshStandardMaterial({
+      color: 0x46a2d4,
+      flatShading: true,
+      roughness: 0.65,
+      metalness: 0.05
+    });
+    const oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
+    oceanMesh.receiveShadow = true;
+    earthGroup.add(oceanMesh);
+
+    // Continentes en relieve tipo plastilina verde moldeada
+    const clayGreenMat = new THREE.MeshStandardMaterial({
+      color: 0x2e8b57,
+      roughness: 0.85,
+      metalness: 0.02,
+      flatShading: false
+    });
+
+    const continentClusters = [
+      // América del Norte
+      { lat: 42, lon: -102, blobs: [[0,0,1.25], [8,-12,0.95], [-10,8,0.85], [14,12,0.8]] },
+      // América del Sur
+      { lat: -15, lon: -58, blobs: [[0,0,1.15], [-12,-4,0.85], [8,-8,0.9], [-22,-6,0.65]] },
+      // Europa
+      { lat: 48, lon: 14, blobs: [[0,0,0.85], [6,12,0.8], [-4,-6,0.65]] },
+      // África
+      { lat: 6, lon: 20, blobs: [[0,0,1.25], [-14,4,0.95], [10,-8,0.95], [-24,2,0.7]] },
+      // Asia
+      { lat: 44, lon: 92, blobs: [[0,0,1.55], [-12,-14,1.15], [-14,14,1.1], [8,24,1.0], [-22,8,0.8]] },
+      // Oceanía
+      { lat: -25, lon: 135, blobs: [[0,0,0.95], [-4,10,0.75]] }
+    ];
+
+    continentClusters.forEach(cont => {
+      cont.blobs.forEach(b => {
+        const pos = latLonToVector3(cont.lat + b[0], cont.lon + b[1], GLOBE_RADIUS * 0.985);
+        const blobGeo = new THREE.DodecahedronGeometry(b[2], 2);
+        // Ligeras irregularidades orgánicas tipo plastilina
+        const posAttr = blobGeo.attributes.position;
+        for (let i = 0; i < posAttr.count; i++) {
+          const vx = posAttr.getX(i), vy = posAttr.getY(i), vz = posAttr.getZ(i);
+          const noise = 0.9 + 0.18 * Math.sin(vx * 3.1 + vy * 2.4) * Math.cos(vz * 2.8);
+          posAttr.setXYZ(i, vx * noise, vy * 0.32, vz * noise);
+        }
+        blobGeo.computeVertexNormals();
+
+        const blobMesh = new THREE.Mesh(blobGeo, clayGreenMat);
+        blobMesh.position.copy(pos);
+        blobMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), pos.clone().normalize());
+        blobMesh.castShadow = true;
+        blobMesh.receiveShadow = true;
+        earthGroup.add(blobMesh);
+      });
+    });
+
+    // --- ALDEA DEL POLO NORTE EN LA CIMA DEL PLANETA (IDÉNTICA A LA IMAGEN) ---
+    const northPoleGroup = new THREE.Group();
+    northPoleGroup.position.set(0, GLOBE_RADIUS * 0.96, 0);
+    earthGroup.add(northPoleGroup);
+
+    const snowClayMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.85, flatShading: true });
+    const mountainMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.75, flatShading: true });
+    const cabinWoodMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.85, flatShading: true });
+    const cabinRedMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.55, flatShading: true });
+    const pineGreenMat = new THREE.MeshStandardMaterial({ color: 0x2d6a4f, roughness: 0.75, flatShading: true });
+
+    // Plataforma escalonada de nieve
+    const baseSnow1 = new THREE.Mesh(new THREE.CylinderGeometry(1.75, 2.05, 0.35, 10), snowClayMat);
+    baseSnow1.position.y = 0.12;
+    baseSnow1.receiveShadow = true;
+    northPoleGroup.add(baseSnow1);
+
+    const baseSnow2 = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.55, 0.32, 9), snowClayMat);
+    baseSnow2.position.y = 0.36;
+    baseSnow2.receiveShadow = true;
+    northPoleGroup.add(baseSnow2);
+
+    // Picos montañosos blancos al fondo
+    const peaks = [
+      { x: -0.55, z: -0.45, r: 0.45, h: 1.15 },
+      { x: -0.05, z: -0.55, r: 0.52, h: 1.45 },
+      { x:  0.48, z: -0.42, r: 0.44, h: 1.1 },
+      { x:  0.82, z: -0.22, r: 0.36, h: 0.85 }
+    ];
+    peaks.forEach(p => {
+      const m = new THREE.Mesh(new THREE.ConeGeometry(p.r, p.h, 5), mountainMat);
+      m.position.set(p.x, 0.45 + p.h / 2, p.z);
+      m.castShadow = true;
+      northPoleGroup.add(m);
+    });
+
+    // Poste del Polo Norte rayado rojo y blanco con esfera roja
+    const poleStick = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.055, 0.085, 0.72, 12),
+      new THREE.MeshStandardMaterial({ map: createCandyCaneTexture(), roughness: 0.4 })
+    );
+    poleStick.position.set(-0.08, 0.84, 0.05);
+    northPoleGroup.add(poleStick);
+
+    const poleTopBall = new THREE.Mesh(new THREE.SphereGeometry(0.095, 12, 12), cabinRedMat);
+    poleTopBall.position.set(-0.08, 1.24, 0.05);
+    northPoleGroup.add(poleTopBall);
+
+    // Función constructora de cabañas navideñas de techo rojo
+    function createNorthPoleCabin(w, h, d, x, z, rotY = 0) {
+      const cGroup = new THREE.Group();
+      const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), cabinWoodMat);
+      walls.position.y = h / 2;
+      walls.castShadow = true;
+      cGroup.add(walls);
+
+      // Techo a dos aguas rojo
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.82, h * 0.85, 4), cabinRedMat);
+      roof.position.y = h + (h * 0.42);
+      roof.rotation.y = Math.PI / 4;
+      roof.castShadow = true;
+      cGroup.add(roof);
+
+      // Puerta iluminada cálida
+      const door = new THREE.Mesh(
+        new THREE.PlaneGeometry(w * 0.32, h * 0.55),
+        new THREE.MeshBasicMaterial({ color: 0xfef08a })
+      );
+      door.position.set(0, h * 0.28, d / 2 + 0.01);
+      cGroup.add(door);
+
+      cGroup.position.set(x, 0.5, z);
+      cGroup.rotation.y = rotY;
+      northPoleGroup.add(cGroup);
+    }
+
+    // Cabañas principales y casitas pequeñas como en la foto
+    createNorthPoleCabin(0.42, 0.36, 0.42, -0.45, 0.12, 0.15);
+    createNorthPoleCabin(0.46, 0.40, 0.46, 0.32, 0.14, -0.15);
+    createNorthPoleCabin(0.22, 0.18, 0.22, 0.12, 0.42, 0);
+    createNorthPoleCabin(0.22, 0.18, 0.22, 0.38, 0.44, 0);
+    createNorthPoleCabin(0.22, 0.18, 0.22, 0.64, 0.40, -0.1);
+
+    // Pinos geométricos alrededor de la plataforma
+    const pineCoords = [
+      [-1.15, 0.35, 0.28], [-0.82, 0.52, 0.34], [0.95, 0.42, 0.32],
+      [1.22, 0.20, 0.26], [-0.95, -0.15, 0.3], [0.85, -0.05, 0.28]
+    ];
+    pineCoords.forEach(pc => {
+      const pine = new THREE.Mesh(new THREE.ConeGeometry(0.11, pc[2] * 1.4, 5), pineGreenMat);
+      pine.position.set(pc[0], 0.32 + pc[2] * 0.65, pc[1]);
+      pine.castShadow = true;
+      northPoleGroup.add(pine);
+    });
+
+    /* =========================================================================
+       5. RUTA DE VUELO Y BALIZAS LOW-POLY
+       ========================================================================= */
+    const ROUTE_ALTITUDE = GLOBE_RADIUS * 1.07;
+    const waypoints3D = WAYPOINTS.map(w => latLonToVector3(w.lat, w.lon, ROUTE_ALTITUDE));
+
+    function getGeodesicArc(p1, p2, segments = 40, peakAlt = 0.42) {
+      const points = [];
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const v = new THREE.Vector3().lerpVectors(p1, p2, t).normalize();
+        v.multiplyScalar(ROUTE_ALTITUDE + Math.sin(t * Math.PI) * peakAlt);
+        points.push(v);
+      }
+      return points;
+    }
+
+    const completedCurvePoints = [];
+    for (let i = 0; i < waypoints3D.length - 1; i++) {
+      completedCurvePoints.push(...getGeodesicArc(waypoints3D[i], waypoints3D[i+1]));
+    }
+    earthGroup.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(completedCurvePoints),
+      new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })
+    ));
+
+    const activeRouteGeo = new THREE.BufferGeometry();
+    earthGroup.add(new THREE.Line(activeRouteGeo, new THREE.LineBasicMaterial({ color: 0xfbbf24, linewidth: 3 })));
+
+    const radarRings = [];
+    WAYPOINTS.forEach((wp) => {
+      const pos = latLonToVector3(wp.lat, wp.lon, GLOBE_RADIUS * 1.015);
+      const beaconGroup = new THREE.Group();
+      beaconGroup.position.copy(pos);
+      beaconGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), pos.clone().normalize());
+
+      const pin = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.32, 5), new THREE.MeshStandardMaterial({ color: 0xef4444, flatShading: true }));
+      pin.rotation.x = Math.PI;
+      pin.position.y = 0.22;
+      beaconGroup.add(pin);
+
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.06, 0.18, 16),
+        new THREE.MeshBasicMaterial({ color: 0xfef08a, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })
+      );
+      ring.rotation.x = Math.PI / 2;
+      beaconGroup.add(ring);
+
+      earthGroup.add(beaconGroup);
+      radarRings.push(ring);
+    });
+
+    /* =========================================================================
+       6. NUEVO TRINEO ESTILO DIORAMA LOW-POLY + LOGO WILLAX BLANCO PNG
+       ========================================================================= */
+    const santaFlightGroup = new THREE.Group();
+    earthGroup.add(santaFlightGroup);
+
+    const SLEIGH_SCALE = 0.27;
+    const sleighSubGroup = new THREE.Group();
+    sleighSubGroup.scale.set(SLEIGH_SCALE, SLEIGH_SCALE, SLEIGH_SCALE);
+    santaFlightGroup.add(sleighSubGroup);
+
+    // Materiales estilo maqueta / plastilina satinada
+    const sleighRedMat = new THREE.MeshStandardMaterial({ color: 0xc81d25, roughness: 0.55, flatShading: true });
+    const sleighTrimGoldMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4, metalness: 0.35, flatShading: true });
+    const sleighSideDarkMat = new THREE.MeshStandardMaterial({ color: 0x7f1d1d, roughness: 0.65, flatShading: true });
+    const whiteClayMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.85, flatShading: true });
+    const deerClayMat = new THREE.MeshStandardMaterial({ color: 0xb07d56, roughness: 0.75, flatShading: true });
+    const antlerClayMat = new THREE.MeshStandardMaterial({ color: 0xfde68a, roughness: 0.65, flatShading: true });
+
+    // Carrocería de trineo de madera/maqueta estilo nórdico
+    const carriageGroup = new THREE.Group();
+
+    // Casco principal facetado
+    const hullShape = new THREE.Shape();
+    hullShape.moveTo(-1.35, 0.45);
+    hullShape.lineTo(-1.45, 1.35);
+    hullShape.lineTo(-0.75, 1.45);
+    hullShape.lineTo(-0.35, 0.95);
+    hullShape.lineTo(0.65, 0.95);
+    hullShape.lineTo(1.25, 1.25);
+    hullShape.lineTo(1.42, 0.72);
+    hullShape.lineTo(1.05, 0.42);
+    hullShape.closePath();
+
+    const hullGeo = new THREE.ExtrudeGeometry(hullShape, {
+      steps: 1, depth: 0.96, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 1
+    });
+    const hullMesh = new THREE.Mesh(hullGeo, sleighRedMat);
+    hullMesh.position.z = -0.48;
+    hullMesh.castShadow = true;
+    carriageGroup.add(hullMesh);
+
+    // Placa lateral oscura para que destaque el logo-willax-blanco.png
+    const sideBoardGeo = new THREE.BoxGeometry(1.45, 0.46, 1.08);
+    const sideBoard = new THREE.Mesh(sideBoardGeo, sleighSideDarkMat);
+    sideBoard.position.set(0.08, 0.68, 0);
+    carriageGroup.add(sideBoard);
+
+    // Logo Willax Blanco PNG en ambos lados del trineo
+    const logoPlaneGeo = new THREE.PlaneGeometry(1.32, 0.48);
+    const logoPlaneMat = new THREE.MeshBasicMaterial({ map: sleighLogoTexture, transparent: true });
+
+    const logoSideR = new THREE.Mesh(logoPlaneGeo, logoPlaneMat);
+    logoSideR.position.set(0.08, 0.68, 0.55);
+    carriageGroup.add(logoSideR);
+
+    const logoSideL = new THREE.Mesh(logoPlaneGeo, logoPlaneMat);
+    logoSideL.position.set(0.08, 0.68, -0.55);
+    logoSideL.rotation.y = Math.PI;
+    carriageGroup.add(logoSideL);
+
+    // Patines geométricos dorados
+    [-0.48, 0.48].forEach(zPos => {
+      const pts = [
+        new THREE.Vector3(-1.55, 0.32, zPos),
+        new THREE.Vector3(-1.15, 0.1, zPos),
+        new THREE.Vector3(1.15, 0.1, zPos),
+        new THREE.Vector3(1.62, 0.45, zPos),
+        new THREE.Vector3(1.42, 0.75, zPos)
+      ];
+      const runnerCurve = new THREE.CatmullRomCurve3(pts);
+      const runnerMesh = new THREE.Mesh(new THREE.TubeGeometry(runnerCurve, 12, 0.055, 5, false), sleighTrimGoldMat);
+      carriageGroup.add(runnerMesh);
+
+      [-0.75, 0.05, 0.85].forEach(px => {
+        const strut = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.36, 0.08), sleighTrimGoldMat);
+        strut.position.set(px, 0.28, zPos);
+        carriageGroup.add(strut);
+      });
+    });
+
+    sleighSubGroup.add(carriageGroup);
+
+    // Saco Low-Poly y cajas de regalo
+    const sack = new THREE.Mesh(new THREE.IcosahedronGeometry(0.62, 1), new THREE.MeshStandardMaterial({ color: 0xa16207, roughness: 0.9, flatShading: true }));
+    sack.scale.set(1.1, 1.3, 1.05);
+    sack.position.set(-0.78, 1.25, 0);
+    sleighSubGroup.add(sack);
+
+    const boxPalette = [0xef4444, 0x10b981, 0xfbbf24, 0x3b82f6];
+    for (let i = 0; i < 5; i++) {
+      const gift = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.28, 0.28),
+        new THREE.MeshStandardMaterial({ color: boxPalette[i % boxPalette.length], flatShading: true })
+      );
+      gift.position.set(-0.78 + (Math.random() - 0.5) * 0.4, 1.7 + i * 0.07, (Math.random() - 0.5) * 0.4);
+      gift.rotation.set(Math.random(), Math.random(), Math.random());
+      sleighSubGroup.add(gift);
+    }
+
+    // Santa Claus Low-Poly
+    const santaGroup = new THREE.Group();
+    santaGroup.position.set(-0.1, 0.88, 0);
+
+    const torso = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4, 1), sleighRedMat);
+    torso.position.y = 0.32;
+    santaGroup.add(torso);
+
+    const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1), new THREE.MeshStandardMaterial({ color: 0xfed7aa, flatShading: true }));
+    head.position.set(0.08, 0.78, 0);
+    santaGroup.add(head);
+
+    const beard = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.5, 6), whiteClayMat);
+    beard.rotation.z = -Math.PI / 3.2;
+    beard.position.set(0.24, 0.68, 0);
+    santaGroup.add(beard);
+
+    const hat = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.48, 6), sleighRedMat);
+    hat.rotation.z = -Math.PI / 3.5;
+    hat.position.set(0.02, 1.04, 0);
+    santaGroup.add(hat);
+
+    const pompom = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08, 0), whiteClayMat);
+    pompom.position.set(-0.2, 1.1, 0);
+    santaGroup.add(pompom);
+
+    sleighSubGroup.add(santaGroup);
+
+    // Renos Low-Poly facetados
+    const reindeerSquad = [];
+    function createLowPolyReindeer(isLead) {
+      const rGroup = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.48, 0.44), deerClayMat);
+      body.position.y = 0.65;
+      rGroup.add(body);
+
+      const neck = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.48, 0.28), deerClayMat);
+      neck.rotation.z = -0.45;
+      neck.position.set(0.45, 0.92, 0);
+      rGroup.add(neck);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.26, 0.26), deerClayMat);
+      head.position.set(0.66, 1.12, 0);
+      rGroup.add(head);
+
+      const nose = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(isLead ? 0.085 : 0.05, 0),
+        isLead ? new THREE.MeshBasicMaterial({ color: 0xff2a2a }) : new THREE.MeshStandardMaterial({ color: 0x1e293b })
+      );
+      nose.position.set(0.89, 1.1, 0);
+      rGroup.add(nose);
+
+      [-0.1, 0.1].forEach(az => {
+        const antler = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.42, 4), antlerClayMat);
+        antler.position.set(0.58, 1.38, az);
+        antler.rotation.z = 0.25;
+        rGroup.add(antler);
+      });
+
+      const legPivots = [];
+      [[-0.32, -0.16], [-0.32, 0.16], [0.32, -0.16], [0.32, 0.16]].forEach(lp => {
+        const p = new THREE.Group();
+        p.position.set(lp[0], 0.45, lp[1]);
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.48, 0.11), deerClayMat);
+        leg.position.y = -0.22;
+        p.add(leg);
+        rGroup.add(p);
+        legPivots.push(p);
+      });
+
+      rGroup.userData = { legs: legPivots, offset: Math.random() * 4 };
+      return rGroup;
+    }
+
+    [
+      { x: 1.65, z: -0.38, lead: false },
+      { x: 1.65, z:  0.38, lead: false },
+      { x: 3.15, z: -0.38, lead: false },
+      { x: 3.15, z:  0.38, lead: true }
+    ].forEach(cfg => {
+      const r = createLowPolyReindeer(cfg.lead);
+      r.position.set(cfg.x, 0, cfg.z);
+      sleighSubGroup.add(r);
+      reindeerSquad.push(r);
+    });
+
+    // Estela de regalos y estrellas geométricas Low-Poly
+    const giftTrail = [];
+    for (let i = 0; i < 7; i++) {
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(0.32, 0.32, 0.32),
+        new THREE.MeshStandardMaterial({ color: boxPalette[i % boxPalette.length], flatShading: true })
+      );
+      sleighSubGroup.add(box);
+      giftTrail.push({
+        mesh: box,
+        baseX: -1.45 - (i * 0.55),
+        offsetY: (Math.random() - 0.5) * 0.5 + 0.55,
+        offsetZ: (Math.random() - 0.5) * 0.7,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    /* =========================================================================
+       7. AUDIO Y NIEVE
+       ========================================================================= */
+    let audioContext = null, audioPlaying = false, audioTimer = null;
+    function playSleighBell() {
+      if (!audioPlaying || !audioContext) return;
+      try {
+        const freqs = [880, 987.77, 1174.66, 1318.51, 1567.98];
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freqs[Math.floor(Math.random() * freqs.length)], audioContext.currentTime);
+        gain.gain.setValueAtTime(0.03, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.9);
+        osc.connect(gain); gain.connect(audioContext.destination);
+        osc.start(); osc.stop(audioContext.currentTime + 0.9);
+      } catch (e) {}
+    }
+
+    document.getElementById('ctrl-audio').addEventListener('click', () => {
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioPlaying = !audioPlaying;
+      const label = document.getElementById('audio-state-text');
+      const btn = document.getElementById('ctrl-audio');
+      if (audioPlaying) {
+        label.textContent = "Campanas ON"; btn.classList.add('bg-emerald-600');
+        audioTimer = setInterval(playSleighBell, 700);
+      } else {
+        label.textContent = "Campanas OFF"; btn.classList.remove('bg-emerald-600');
+        clearInterval(audioTimer);
+      }
+    });
+
+    const snowOverlay = document.getElementById('snow-overlay');
+    const snowElements = [];
+    for (let i = 0; i < 40; i++) {
+      const el = document.createElement('div');
+      el.className = 'snow-dot';
+      const sz = Math.random() * 4 + 2;
+      el.style.width = sz + 'px'; el.style.height = sz + 'px';
+      el.style.opacity = (Math.random() * 0.7 + 0.3).toString();
+      snowOverlay.appendChild(el);
+      snowElements.push({ el, x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight, vy: Math.random() * 1.5 + 0.8, sway: Math.random() * 4 });
+    }
+
+    /* =========================================================================
+       8. CONTROLES HUD Y ANIMACIÓN
+       ========================================================================= */
+    let currentIndex = 0, flightProgress = 0, isPaused = false, simulationMultiplier = 1;
+    let deliveredPresents = 5842109330, cameraMode = 'willax';
+
+    function updateHUDData() {
+      const cur = WAYPOINTS[currentIndex];
+      const nxt = WAYPOINTS[(currentIndex + 1) % WAYPOINTS.length];
+      const prv = WAYPOINTS[(currentIndex - 1 + WAYPOINTS.length) % WAYPOINTS.length];
+      document.getElementById('hud-city').textContent = cur.city;
+      document.getElementById('hud-country').textContent = cur.country;
+      document.getElementById('hud-stage-num').textContent = `PARADA ${currentIndex + 1} / ${WAYPOINTS.length}`;
+      document.getElementById('corridor-prev').textContent = `Salida: ${prv.city}`;
+      document.getElementById('corridor-next').textContent = `Siguiente: ${nxt.city}`;
+    }
+
+    const btnWillax = document.getElementById('cam-willax-btn');
+    const btnNorth = document.getElementById('cam-northpole-btn');
+    const btnTactical = document.getElementById('cam-tactical-btn');
+
+    function resetCamBtns() {
+      [btnWillax, btnNorth, btnTactical].forEach(b => b.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-300");
+    }
+
+    btnWillax.addEventListener('click', () => {
+      cameraMode = 'willax'; controls.enabled = false; resetCamBtns();
+      btnWillax.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500 text-black font-black shadow";
+    });
+    btnNorth.addEventListener('click', () => {
+      cameraMode = 'northpole'; controls.enabled = false; resetCamBtns();
+      btnNorth.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-sky-500 text-white shadow";
+    });
+    btnTactical.addEventListener('click', () => {
+      cameraMode = 'tactical'; controls.enabled = true; resetCamBtns();
+      btnTactical.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-white shadow";
+    });
+
+    document.getElementById('ctrl-play').addEventListener('click', () => {
+      isPaused = !isPaused;
+      const btn = document.getElementById('ctrl-play');
+      btn.innerHTML = isPaused ? `<span>▶</span> Reanudar` : `<span>⏸</span> Pausar`;
+      btn.classList.toggle('bg-emerald-600', !isPaused);
+      btn.classList.toggle('bg-amber-600', isPaused);
+    });
+    document.getElementById('ctrl-next').addEventListener('click', () => { currentIndex = (currentIndex + 1) % WAYPOINTS.length; flightProgress = 0; updateHUDData(); });
+    document.getElementById('ctrl-prev').addEventListener('click', () => { currentIndex = (currentIndex - 1 + WAYPOINTS.length) % WAYPOINTS.length; flightProgress = 0; updateHUDData(); });
+
+    document.querySelectorAll('.speed-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('.speed-opt').forEach(o => { o.classList.remove('bg-amber-400', 'text-black'); o.classList.add('bg-white/10', 'text-white'); });
+        opt.classList.add('bg-amber-400', 'text-black'); opt.classList.remove('bg-white/10', 'text-white');
+        simulationMultiplier = parseFloat(opt.getAttribute('data-speed'));
+      });
+    });
+
+    const hudRoot = document.getElementById('hud-root');
+    const btnShowHud = document.getElementById('btn-show-hud');
+    document.getElementById('ctrl-cinema').addEventListener('click', () => { hudRoot.classList.add('opacity-0', 'pointer-events-none'); btnShowHud.classList.remove('hidden'); });
+    btnShowHud.addEventListener('click', () => { hudRoot.classList.remove('opacity-0'); btnShowHud.classList.add('hidden'); });
+
+    let lastTimestamp = performance.now();
+    function animate(nowTime) {
+      requestAnimationFrame(animate);
+      const dt = (nowTime - lastTimestamp) / 1000;
+      lastTimestamp = nowTime;
+
+      const currentWP = waypoints3D[currentIndex];
+      const nextWP = waypoints3D[(currentIndex + 1) % waypoints3D.length];
+
+      if (!isPaused) {
+        flightProgress += (dt / 14) * simulationMultiplier;
+        if (flightProgress >= 1) {
+          flightProgress = 0;
+          currentIndex = (currentIndex + 1) % WAYPOINTS.length;
+          updateHUDData();
+        }
+        deliveredPresents += Math.floor(dt * 2600 * simulationMultiplier);
+        document.getElementById('hud-presents').textContent = deliveredPresents.toLocaleString('en-US');
+      }
+
+      const curPos = new THREE.Vector3().lerpVectors(currentWP, nextWP, flightProgress).normalize();
+      curPos.multiplyScalar(ROUTE_ALTITUDE + Math.sin(flightProgress * Math.PI) * 0.35);
+      santaFlightGroup.position.copy(curPos);
+
+      const forwardDir = nextWP.clone().sub(currentWP).normalize();
+      const upDir = curPos.clone().normalize();
+      santaFlightGroup.quaternion.setFromRotationMatrix(new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0), forwardDir, upDir));
+
+      sleighSubGroup.rotation.z = Math.sin(nowTime * 0.003) * 0.04;
+      activeRouteGeo.setFromPoints(getGeodesicArc(curPos, nextWP, 25, 0.1));
+
+      reindeerSquad.forEach(d => {
+        const gallop = Math.sin(nowTime * 0.009 + d.userData.offset);
+        d.position.y = Math.sin(nowTime * 0.007 + d.userData.offset) * 0.06;
+        d.userData.legs[0].rotation.z = gallop * 0.65;
+        d.userData.legs[1].rotation.z = -gallop * 0.65;
+        d.userData.legs[2].rotation.z = -gallop * 0.65;
+        d.userData.legs[3].rotation.z = gallop * 0.65;
+      });
+
+      giftTrail.forEach(g => {
+        g.mesh.position.set(g.baseX, g.offsetY + Math.sin(nowTime * 0.004 + g.phase) * 0.14, g.offsetZ);
+        g.mesh.rotation.x += 0.02; g.mesh.rotation.y += 0.03;
+      });
+
+      const radarScale = 1 + (Math.sin(nowTime * 0.005) + 1) * 0.8;
+      radarRings.forEach(r => { r.scale.set(radarScale, radarScale, 1); r.material.opacity = Math.max(0.1, 1 - (radarScale / 2.6)); });
+
+      if (cameraMode === 'willax') {
+        const rightDir = new THREE.Vector3().crossVectors(forwardDir, upDir).normalize();
+        const lookTarget = curPos.clone().add(forwardDir.clone().multiplyScalar(0.4));
+        const targetCamPos = curPos.clone().add(rightDir.clone().multiplyScalar(2.7)).add(upDir.clone().multiplyScalar(1.25)).add(forwardDir.clone().multiplyScalar(-1.1));
+        camera.position.lerp(targetCamPos, 0.05);
+        camera.lookAt(lookTarget);
+      } else if (cameraMode === 'northpole') {
+        // Toma directa estilo tu imagen de referencia del Polo Norte
+        camera.position.lerp(new THREE.Vector3(0, 6.8, 6.2), 0.05);
+        camera.lookAt(new THREE.Vector3(0, 4.9, 0));
+      } else {
+        controls.update();
+      }
+
+      const now = new Date();
+      document.getElementById('hud-utc').textContent = now.toISOString().substring(11, 19);
+      const localTime = new Date(now.getTime() + (WAYPOINTS[currentIndex].tzOffset * 3600 * 1000));
+      document.getElementById('hud-local-time').textContent = localTime.toTimeString().substring(0, 8);
+      document.getElementById('hud-countdown').textContent = `${String(Math.max(0, 23 - localTime.getUTCHours())).padStart(2,'0')}:${String(Math.max(0, 59 - localTime.getUTCMinutes())).padStart(2,'0')}:${String(Math.max(0, 59 - localTime.getUTCSeconds())).padStart(2,'0')}`;
+      document.getElementById('hud-speed').textContent = `${(6420 + Math.floor(Math.sin(nowTime * 0.002) * 280)).toLocaleString()} km/h`;
+
+      snowElements.forEach(s => {
+        s.y += s.vy; s.x += Math.sin(nowTime * 0.002 + s.sway) * 0.5;
+        if (s.y > window.innerHeight) { s.y = -10; s.x = Math.random() * window.innerWidth; }
+        s.el.style.transform = `translate3d(${s.x}px, ${s.y}px, 0)`;
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    window.onload = () => { updateHUDData(); requestAnimationFrame(animate); };
+  </script>
+</body>
+</html>
