@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Willax TV - Santa Tracker 3D (Edición Diorama)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; }
+    body, html {
+      width: 100%; height: 100%; margin: 0; padding: 0;
+      overflow: hidden; background: #07223d;
+      font-family: 'Montserrat', sans-serif; user-select: none;
+    }
+    .font-hud { font-family: 'Orbitron', monospace; }
+    .tv-glass {
+      background: linear-gradient(135deg, rgba(8, 22, 42, 0.88) 0%, rgba(4, 12, 26, 0.94) 100%);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), inset 0 0 16px rgba(255, 255, 255, 0.05);
+    }
+    .glow-gold {
+      text-shadow: 0 0 14px rgba(251, 191, 36, 0.8), 0 0 28px rgba(245, 158, 11, 0.4);
+    }
+    #canvas-container {
+      position: absolute; inset: 0; width: 100vw; height: 100vh; z-index: 1;
+    }
+    .snow-dot {
+      position: absolute; background: rgba(255, 255, 255, 0.92);
+      border-radius: 50%; pointer-events: none;
+    }
+  </style>
+</head>
+<body class="w-full h-full text-white">
+
+  <div id="canvas-container"></div>
+  <div id="snow-overlay" class="fixed inset-0 pointer-events-none z-10 overflow-hidden"></div>
+
+  <!-- INTERFAZ BROADCAST TV WILLAX -->
+  <div id="hud-root" class="relative z-20 w-full h-full p-4 md:p-6 flex justify-between items-stretch pointer-events-none transition-opacity duration-300">
+    
+    <!-- COLUMNA IZQUIERDA APILADA: LOGO + PRÓXIMA PARADA + TELEMETRÍA + REGALOS -->
+    <aside class="flex flex-col justify-between gap-2.5 w-80 md:w-[22.5rem] max-h-full pointer-events-none">
+      
+      <!-- 1. Badge Oficial Willax TV -->
+      <div class="tv-glass rounded-2xl p-3 flex items-center space-x-3 pointer-events-auto border-t-2 border-red-500 shadow-2xl">
+        <div class="bg-slate-950/90 border border-white/15 px-2.5 py-1.5 rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
+          <img id="hud-logo-img" src="./logo-willax-navidad-1.png" alt="Willax Navidad" class="h-9 md:h-10 w-auto object-contain">
+        </div>
+
+        <div class="min-w-0">
+          <div class="flex items-center space-x-1.5">
+            <span class="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider animate-pulse">
+              <span class="w-1.5 h-1.5 rounded-full bg-white"></span> EN VIVO
+            </span>
+            <span class="text-[10px] font-bold text-amber-300 uppercase tracking-wider truncate">ESPECIAL NAVIDAD</span>
+          </div>
+          <h1 class="text-xs md:text-sm font-extrabold uppercase tracking-wide text-white drop-shadow truncate">
+            Santa Tracker Mundial
+          </h1>
+        </div>
+      </div>
+
+      <!-- 2. Panel Próxima Parada -->
+      <div class="tv-glass rounded-2xl p-4 space-y-2.5 pointer-events-auto border-l-4 border-l-amber-400 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-white/10 pb-1.5">
+          <span class="text-[11px] font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> Próxima Parada
+          </span>
+          <span id="hud-stage-num" class="text-[11px] font-mono font-bold text-sky-300">PARADA 1 / 16</span>
+        </div>
+
+        <div>
+          <div id="hud-country" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">KIRIBATI (UTC+14)</div>
+          <div id="hud-city" class="text-2xl md:text-3xl font-black text-white tracking-wide glow-gold leading-tight">KIRITIMATI</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-black/50 border border-white/10 rounded-xl p-2">
+            <div class="text-[9px] font-bold text-gray-400 uppercase">Hora Local Real</div>
+            <div id="hud-local-time" class="text-xs md:text-sm font-hud font-bold text-sky-300">00:00:00</div>
+          </div>
+          <div class="bg-black/50 border border-white/10 rounded-xl p-2">
+            <div class="text-[9px] font-bold text-gray-400 uppercase">Falta Medianoche</div>
+            <div id="hud-countdown" class="text-xs md:text-sm font-hud font-bold text-amber-400">00:00:00</div>
+          </div>
+        </div>
+
+        <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-[11px] space-y-0.5">
+          <div class="text-[9px] font-bold text-sky-400 uppercase tracking-wider">Corredor Aéreo Activo</div>
+          <div class="flex items-center justify-between text-gray-300 font-semibold">
+            <span id="corridor-prev" class="truncate max-w-[115px]">Salida: Honolulú</span>
+            <span class="text-amber-400">➔</span>
+            <span id="corridor-next" class="text-white font-bold truncate max-w-[120px]">Siguiente: Auckland</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Panel Telemetría de Vuelo -->
+      <div class="tv-glass rounded-2xl p-3.5 space-y-2 pointer-events-auto border-l-4 border-l-sky-400 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-white/10 pb-1.5">
+          <span class="text-[11px] font-black uppercase tracking-wider text-sky-300">Telemetría de Vuelo</span>
+          <span class="text-[9px] font-mono text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full font-bold">RADAR ACTIVO</span>
+        </div>
+
+        <div class="space-y-1.5">
+          <div class="flex justify-between items-center bg-black/40 px-2.5 py-1.5 rounded-xl border border-white/5">
+            <span class="text-[9px] font-bold text-gray-400 uppercase">Velocidad Terrestre</span>
+            <span id="hud-speed" class="font-hud font-black text-amber-300 text-xs">6,420 km/h</span>
+          </div>
+          <div class="flex justify-between items-center bg-black/40 px-2.5 py-1.5 rounded-xl border border-white/5">
+            <span class="text-[9px] font-bold text-gray-400 uppercase">Altitud Orbital</span>
+            <span class="font-hud font-black text-sky-300 text-xs">28,400 m</span>
+          </div>
+          <div class="flex justify-between items-center bg-black/40 px-2.5 py-1.5 rounded-xl border border-white/5">
+            <span class="text-[9px] font-bold text-gray-400 uppercase">Tracción de Renos</span>
+            <span class="font-bold text-rose-300 text-[11px] flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span> Rodolfo al 100%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Contador Global de Regalos Entregados -->
+      <div class="tv-glass rounded-2xl px-4 py-2.5 flex items-center space-x-3 pointer-events-auto border-b-4 border-b-amber-400 shadow-2xl">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 text-black flex items-center justify-center text-xl shadow font-black flex-shrink-0">
+          🎁
+        </div>
+        <div class="min-w-0">
+          <div class="text-[9px] font-extrabold uppercase tracking-wider text-amber-300 truncate">Regalos Entregados en el Mundo</div>
