@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Willax TV - Cuenta Regresiva Navidad Perú 24/7</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; }
+    body, html {
+      width: 100%; height: 100%; margin: 0; padding: 0;
+      overflow: hidden; background: #07223d;
+      font-family: 'Montserrat', sans-serif; user-select: none;
+    }
+    .font-hud { font-family: 'Orbitron', monospace; }
+    .tv-glass {
+      background: linear-gradient(135deg, rgba(8, 22, 42, 0.90) 0%, rgba(4, 12, 26, 0.95) 100%);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65), inset 0 0 16px rgba(255, 255, 255, 0.05);
+    }
+    .countdown-hero-card {
+      background: linear-gradient(145deg, rgba(28, 10, 36, 0.95) 0%, rgba(10, 20, 46, 0.97) 100%);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 2px solid rgba(251, 191, 36, 0.55);
+      box-shadow: 0 22px 55px rgba(0, 0, 0, 0.82), 0 0 32px rgba(239, 68, 68, 0.28), inset 0 0 24px rgba(251, 191, 36, 0.10);
+    }
+    .glow-gold {
+      text-shadow: 0 0 16px rgba(251, 191, 36, 0.95), 0 0 32px rgba(245, 158, 11, 0.55);
+    }
+    .glow-red {
+      text-shadow: 0 0 16px rgba(244, 63, 94, 0.95), 0 0 30px rgba(225, 29, 72, 0.5);
+    }
+    #canvas-container {
+      position: absolute; inset: 0; width: 100vw; height: 100vh; z-index: 1;
+    }
+    .snow-dot {
+      position: absolute; background: rgba(255, 255, 255, 0.92);
+      border-radius: 50%; pointer-events: none;
+    }
+    .status-fade {
+      transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+  </style>
+</head>
+<body class="w-full h-full text-white">
+
+  <div id="canvas-container"></div>
+  <div id="snow-overlay" class="fixed inset-0 pointer-events-none z-10 overflow-hidden"></div>
+
+  <!-- INTERFAZ BROADCAST TV WILLAX 24/7 -->
+  <div id="hud-root" class="relative z-20 w-full h-full p-3.5 md:p-5 flex justify-between items-stretch pointer-events-none transition-opacity duration-300">
+    
+    <!-- COLUMNA IZQUIERDA CON ESPACIADO UNIFORME (gap-2.5) ENTRE LOS 5 CONTENEDORES -->
+    <aside class="flex flex-col gap-2.5 w-88 md:w-[29rem] h-full pointer-events-none">
+      
+      <!-- 1. Badge Oficial Willax TV -->
+      <div class="tv-glass rounded-2xl p-3.5 flex items-center space-x-3.5 pointer-events-auto border-t-2 border-red-500 shadow-2xl flex-shrink-0">
+        <div class="bg-slate-950/90 border border-white/15 px-3 py-2 rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
+          <img id="hud-logo-img" src="./logo-willax-navidad-1.png" alt="Willax Navidad" class="h-11 md:h-12 w-auto object-contain">
+        </div>
+
+        <div class="min-w-0">
+          <div class="flex items-center space-x-2">
+            <span class="bg-red-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider animate-pulse">
+              <span class="w-1.5 h-1.5 rounded-full bg-white"></span> 24/7 EN VIVO
+            </span>
+            <span class="text-[11px] font-extrabold text-amber-300 uppercase tracking-wider truncate">ESPECIAL PERÚ</span>
+          </div>
+          <h1 class="text-base md:text-lg font-black uppercase tracking-wide text-white drop-shadow truncate mt-0.5">
+            Camino a la Navidad
+          </h1>
+        </div>
+      </div>
+
+      <!-- 2. CONTADOR MAESTRO PROTAGONISTA -->
+      <div class="countdown-hero-card rounded-2xl p-4 space-y-2.5 pointer-events-auto border-l-4 border-l-amber-400 flex-shrink-0">
+        <div class="flex items-center justify-between border-b border-amber-400/25 pb-2 gap-2">
+          <span class="text-xs md:text-sm font-black uppercase tracking-wide text-amber-300 flex items-center gap-1.5 leading-tight">
+            🇵🇪 <span id="peru-countdown-title">FALTA PARA NAVIDAD EN PERÚ</span>
+          </span>
+          <span id="peru-day-phase" class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-red-500/25 text-rose-200 border border-rose-400/30 uppercase flex-shrink-0">
+            Tarde en Lima
+          </span>
+        </div>
+
+        <div id="peru-xmas-grid" class="grid grid-cols-4 gap-2 text-center">
+          <div class="bg-black/75 border border-amber-400/45 rounded-xl py-3 px-1 shadow-inner">
+            <div id="xmas-days" class="text-3xl md:text-[2.25rem] font-hud font-black text-amber-400 glow-gold leading-none">00</div>
+            <div class="text-[10px] font-extrabold text-amber-200/90 uppercase mt-1.5 tracking-wider">Días</div>
+          </div>
+          <div class="bg-black/75 border border-white/15 rounded-xl py-3 px-1 shadow-inner">
+            <div id="xmas-hours" class="text-3xl md:text-[2.25rem] font-hud font-black text-white leading-none">00</div>
+            <div class="text-[10px] font-extrabold text-gray-300 uppercase mt-1.5 tracking-wider">Horas</div>
+          </div>
+          <div class="bg-black/75 border border-white/15 rounded-xl py-3 px-1 shadow-inner">
+            <div id="xmas-mins" class="text-3xl md:text-[2.25rem] font-hud font-black text-white leading-none">00</div>
+            <div class="text-[10px] font-extrabold text-gray-300 uppercase mt-1.5 tracking-wider">Min</div>
+          </div>
+          <div class="bg-black/80 border border-rose-500/55 rounded-xl py-3 px-1 shadow-inner">
+            <div id="xmas-secs" class="text-3xl md:text-[2.25rem] font-hud font-black text-rose-400 glow-red leading-none">00</div>
+            <div class="text-[10px] font-extrabold text-rose-200/95 uppercase mt-1.5 tracking-wider">Seg</div>
+          </div>
+        </div>
+
+        <div id="peru-xmas-celebration" class="hidden text-center py-3 bg-gradient-to-r from-red-600/35 via-amber-500/35 to-emerald-600/35 rounded-xl border border-amber-400/50">
+          <div class="text-lg font-black text-amber-300 glow-gold uppercase tracking-wide">🎄 ¡FELIZ NAVIDAD, PERÚ! 🎄</div>
+          <div class="text-[11px] text-gray-100 font-semibold mt-0.5">¡Santa ya está repartiendo regalos en todo el país!</div>
+        </div>
+      </div>
+
+      <!-- 3. Estado del Taller / Ruta Oficial -->
+      <div class="tv-glass rounded-2xl p-3 space-y-2 pointer-events-auto border-l-4 border-l-sky-400 shadow-2xl flex-shrink-0">
+        <div class="flex items-center justify-between border-b border-white/10 pb-1">
+          <span id="mission-badge" class="text-[10px] font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Base Polo Norte • Preparativos
+          </span>
+          <span id="hud-stage-num" class="text-[10px] font-mono font-bold text-sky-300">TALLER ACTIVO</span>
+        </div>
+
+        <div>
+          <div id="hud-country" class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">ALDEA DE SANTA • POLO NORTE</div>
+          <div id="hud-city" class="text-base md:text-lg font-black text-white tracking-wide leading-tight">ALISTANDO TRINEO Y REGALOS</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-1.5">
+          <div class="bg-black/50 border border-white/10 rounded-xl p-1.5">
+            <div id="left-metric-label" class="text-[8px] font-bold text-gray-400 uppercase">Despegue Oficial</div>
+            <div id="hud-local-time" class="text-xs font-hud font-bold text-sky-300">24 DIC • 00:00</div>
+          </div>
+          <div class="bg-black/50 border border-white/10 rounded-xl p-1.5">
+            <div id="local-metric-label" class="text-[8px] font-bold text-gray-400 uppercase">Avance Duendes</div>
+            <div id="hud-local-metric" class="text-xs font-hud font-bold text-emerald-400">0.00% Listo</div>
+          </div>
+        </div>
+
+        <div class="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5 text-[11px] overflow-hidden">
+          <div id="prep-rotating-slot" class="status-fade flex items-center justify-between text-gray-200 font-semibold">
+            <span id="prep-slot-left" class="truncate">🧝 Duendes: Armado y envoltura de regalos</span>
+            <span id="prep-slot-right" class="text-amber-300 font-bold text-[10px] flex-shrink-0 ml-2">EN TALLER</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Contador Sincronizado de Regalos -->
+      <div class="tv-glass rounded-2xl p-3.5 flex items-center space-x-3.5 pointer-events-auto border-b-2 border-b-amber-400 shadow-2xl flex-shrink-0">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 text-black flex items-center justify-center text-2xl shadow font-black flex-shrink-0">
+          🎁
+        </div>
+        <div class="min-w-0 flex-1">
+          <div id="presents-label" class="text-[10px] font-extrabold uppercase tracking-wider text-amber-300 truncate">
+            Regalos Armados (Meta: 2.1 Mil Millones)
+          </div>
+          <div id="hud-presents" class="text-xl md:text-2xl font-hud font-black text-white tracking-wider glow-gold mt-0.5">
+            0
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. BOLETÍN NAVIDEÑO CONECTADO A GOOGLE SHEETS CSV (AUTOAJUSTE + DESPLAZAMIENTO SUAVE SIN DESBORDE) -->
+      <div class="tv-glass rounded-2xl p-3.5 pointer-events-auto border-l-4 border-l-red-500 shadow-2xl flex flex-col justify-between flex-1 min-h-[6.5rem] overflow-hidden">
+        <div class="flex items-center justify-between border-b border-white/10 pb-1.5 flex-shrink-0">
+          <span class="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> BOLETÍN NAVIDAD PERÚ
+          </span>
+          <span id="bulletin-counter" class="text-[9px] font-mono text-gray-400">EN VIVO • 1/6</span>
+        </div>
+        <div id="peru-ticker-viewport" class="relative flex-1 flex items-center overflow-hidden mt-1.5">
+          <p id="peru-ticker-text" class="status-fade w-full text-xs md:text-[13px] font-semibold text-gray-100 leading-snug">
+            🎅 Santa y sus duendes alistan el trineo, el traje, las galletas con leche y millones de regalos en el Polo Norte antes del 24 de diciembre.
+          </p>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- COLUMNA DERECHA -->
+    <div class="flex flex-col justify-between items-end pointer-events-none flex-1 pl-4">
+      
+      <!-- Hora Oficial Perú & Switcher de Cámara -->
+      <div class="tv-glass rounded-2xl px-4 py-2.5 flex items-center space-x-4 pointer-events-auto border-t-2 border-red-500">
+        <div>
+          <div class="text-[9px] font-extrabold uppercase tracking-widest text-rose-400 flex items-center gap-1">
+            🇵🇪 Hora Oficial Perú
+          </div>
+          <div id="hud-peru-time" class="text-base md:text-lg font-hud font-bold text-white tracking-wider">00:00:00</div>
+        </div>
+
+        <div class="h-8 w-px bg-white/20"></div>
+
+        <div>
+          <div class="text-[9px] font-extrabold uppercase tracking-widest text-emerald-400 flex items-center justify-between gap-2">
+            <span>Cámara</span>
+            <span id="director-badge" class="text-[8px] bg-emerald-500/25 text-emerald-300 px-1.5 py-0.2 rounded">AUTO TV</span>
+          </div>
+          <div class="flex items-center space-x-1.5 mt-1">
+            <button id="cam-auto-btn" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-black font-black shadow">
+              Director 24/7
+            </button>
+            <button id="cam-northpole-btn" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-300">
+              Aldea Santa
+            </button>
+            <button id="cam-willax-btn" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-300">
+              Trineo
+            </button>
+            <button id="cam-tactical-btn" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-300">
+              Libre
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Único Botón Inferior Derecho: Encendido / Apagado de Música -->
+      <div class="tv-glass rounded-2xl p-2 pointer-events-auto shadow-2xl">
+        <button id="ctrl-audio" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition text-white flex items-center gap-2 cursor-pointer">
+          <span id="audio-icon">🔇</span>
+          <span id="audio-state-text">Música Off</span>
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    /* =========================================================================
+       1. CONEXIÓN EN VIVO CON GOOGLE SHEETS CSV + RESPALDO AUTOMÁTICO
+       ========================================================================= */
+    const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRSQoI9x_wCcpaV81MZbunWLztLU8_CjkqQcBi90hmOQ6SSGxZtBSbYhrYNITXwXm79DPxw9VhmdWSq/pub?gid=0&single=true&output=csv";
+
+    const FALLBACK_TICKER_MESSAGES = [
+      "🎅 Santa y sus duendes alistan el trineo, el traje, las galletas con leche y millones de regalos en el Polo Norte antes del 24 de diciembre.",
+      "🎄 ¡Sigue en vivo la cuenta regresiva oficial hacia la Navidad en todo el Perú por la señal digital de Willax TV!",
+      "🏔️ Desde Cusco hasta Piura, de Lima a Iquitos: ¡comparte en el chat desde qué ciudad nos acompañas esta Navidad!",
+      "🧝 Los duendes trabajan turno completo para completar los 2,100 millones de regalos destinados a los niños del mundo.",
+      "🍫 Tradición peruana: chocolatada caliente, panetón y villancicos en familia esperando la llegada de la Nochebuena.",
+      "🎶 Activa el sonido abajo a la derecha para disfrutar de villancicos instrumentales las 24 horas del día."
+    ];
+
+    let activeTickerMessages = [...FALLBACK_TICKER_MESSAGES];
+    let tickerIdx = 0;
+
+    // Parser CSV robusto (soporta celdas con comas y comillas dobles desde Google Sheets)
+    function parseCSVRows(csvText) {
+      const rows = [];
+      let currentRow = [];
+      let currentVal = '';
+      let insideQuotes = false;
+
+      for (let i = 0; i < csvText.length; i++) {
+        const char = csvText[i];
+        const nextChar = csvText[i + 1];
+
+        if (char === '"') {
+          if (insideQuotes && nextChar === '"') {
+            currentVal += '"';
+            i++;
+          } else {
+            insideQuotes = !insideQuotes;
+          }
+        } else if (char === ',' && !insideQuotes) {
+          currentRow.push(currentVal.trim());
+          currentVal = '';
+        } else if ((char === '\n' || (char === '\r' && nextChar === '\n')) && !insideQuotes) {
+          if (char === '\r') i++;
+          currentRow.push(currentVal.trim());
+          rows.push(currentRow);
+          currentRow = [];
+          currentVal = '';
+        } else {
+          currentVal += char;
+        }
+      }
+      if (currentVal.length > 0 || currentRow.length > 0) {
+        currentRow.push(currentVal.trim());
+        rows.push(currentRow);
+      }
+      return rows;
+    }
+
+    let bulletinNextTimer = null;
+    let bulletinScrollAnim = null;
+
+    function renderBulletinMessage(index) {
+      const tickerEl = document.getElementById('peru-ticker-text');
+      const viewportEl = document.getElementById('peru-ticker-viewport');
+      const counterEl = document.getElementById('bulletin-counter');
+      if (!tickerEl || !viewportEl || activeTickerMessages.length === 0) return;
+
+      clearTimeout(bulletinNextTimer);
+      if (bulletinScrollAnim) {
+        cancelAnimationFrame(bulletinScrollAnim);
+        bulletinScrollAnim = null;
+      }
+
+      const text = activeTickerMessages[index];
+      tickerEl.style.transition = 'opacity 0.4s ease';
+      tickerEl.style.transform = 'translateY(0px)';
+      tickerEl.textContent = text;
+      if (counterEl) counterEl.textContent = `EN VIVO • ${index + 1}/${activeTickerMessages.length}`;
+
+      // 1. Autoajuste inteligente de tamaño de fuente según longitud
+      if (text.length > 220) {
+        tickerEl.style.fontSize = '11px';
+        tickerEl.style.lineHeight = '1.32';
+      } else if (text.length > 145) {
+        tickerEl.style.fontSize = '11.5px';
+        tickerEl.style.lineHeight = '1.36';
+      } else {
+        tickerEl.style.fontSize = '';
+        tickerEl.style.lineHeight = '';
+      }
+
+      // 2. Medir si aún excede la altura disponible para activar desplazamiento vertical suave
+      requestAnimationFrame(() => {
+        const overflowPx = tickerEl.scrollHeight - viewportEl.clientHeight;
+        let displayDurationMs = 12000;
+
+        if (overflowPx > 4) {
+          viewportEl.style.alignItems = 'flex-start';
+          const scrollDurationMs = Math.min(14000, Math.max(4500, overflowPx * 75));
+          const initialPauseMs = 2600;
+          const endPauseMs = 2400;
+          displayDurationMs = initialPauseMs + scrollDurationMs + endPauseMs;
+
+          setTimeout(() => {
+            const startTime = performance.now();
+            function stepScroll(now) {
+              const elapsed = now - startTime;
+              const progress = Math.min(1, elapsed / scrollDurationMs);
+              // Suavizado easeInOutQuad
+              const eased = progress < 0.5
+                ? 2 * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+              tickerEl.style.transform = `translateY(${-overflowPx * eased}px)`;
+              if (progress < 1) {
+                bulletinScrollAnim = requestAnimationFrame(stepScroll);
+              }
+            }
+            bulletinScrollAnim = requestAnimationFrame(stepScroll);
+          }, initialPauseMs);
+        } else {
+          viewportEl.style.alignItems = 'center';
+        }
+
+        // Programar transición al siguiente mensaje
+        bulletinNextTimer = setTimeout(() => {
+          tickerEl.style.opacity = '0';
+          setTimeout(() => {
+            tickerIdx = (tickerIdx + 1) % activeTickerMessages.length;
+            renderBulletinMessage(tickerIdx);
+            tickerEl.style.opacity = '1';
+          }, 420);
+        }, displayDurationMs);
+      });
+    }
+
+    async function syncGoogleSheetsBulletin() {
+      try {
+        const cacheBusterUrl = `${GOOGLE_SHEETS_CSV_URL}&t=${Date.now()}`;
+        const response = await fetch(cacheBusterUrl, { cache: 'no-store' });
+        if (!response.ok) return;
+
+        const csvText = await response.text();
+        const parsedRows = parseCSVRows(csvText);
+
+        const extracted = parsedRows
+          .map(r => (r[0] || '').trim())
+          .filter(txt => txt.length > 2 && !['mensaje', 'mensajes', 'texto', 'boletin', 'boletín', 'titular'].includes(txt.toLowerCase()));
+
+        if (extracted.length > 0) {
+          const isFirstSync = JSON.stringify(activeTickerMessages) === JSON.stringify(FALLBACK_TICKER_MESSAGES);
+          activeTickerMessages = extracted;
+          if (tickerIdx >= activeTickerMessages.length) {
+            tickerIdx = 0;
+          }
+          if (isFirstSync) {
+            renderBulletinMessage(tickerIdx);
+          }
+        }
+      } catch (err) {
+        // Mantiene mensajes activos si hay corte temporal de red
+      }
+    }
+
+    // Inicia el ciclo de lectura del boletín y sincroniza cada 3 minutos
+    renderBulletinMessage(0);
+    syncGoogleSheetsBulletin();
+    setInterval(syncGoogleSheetsBulletin, 180000);
+
+    /* =========================================================================
+       2. COORDENADAS GLOBALES Y CÁLCULO REAL DE REGALOS Y AVANCE DE DUENDES
+       ========================================================================= */
+    const WAYPOINTS = [
+      { city: "KIRITIMATI", country: "KIRIBATI • PRIMER DESTINO (UTC+14)", lat: 1.8721, lon: -157.3631, timeZone: "Pacific/Kiritimati" },
+      { city: "AUCKLAND", country: "NUEVA ZELANDA (UTC+13)", lat: -36.8485, lon: 174.7633, timeZone: "Pacific/Auckland" },
+      { city: "SÍDNEY", country: "AUSTRALIA (UTC+11)", lat: -33.8688, lon: 151.2093, timeZone: "Australia/Sydney" },
+      { city: "TOKIO", country: "JAPÓN (UTC+9)", lat: 35.6762, lon: 139.6503, timeZone: "Asia/Tokyo" },
+      { city: "PEKÍN", country: "CHINA (UTC+8)", lat: 39.9042, lon: 116.4074, timeZone: "Asia/Shanghai" },
+      { city: "BANGKOK", country: "TAILANDIA (UTC+7)", lat: 13.7563, lon: 100.5018, timeZone: "Asia/Bangkok" },
+      { city: "NUEVA DELHI", country: "INDIA (UTC+5:30)", lat: 28.6139, lon: 77.2090, timeZone: "Asia/Kolkata" },
+      { city: "DUBÁI", country: "EMIRATOS ÁRABES (UTC+4)", lat: 25.2048, lon: 55.2708, timeZone: "Asia/Dubai" },
+      { city: "ROMA", country: "ITALIA (UTC+1)", lat: 41.9028, lon: 12.4964, timeZone: "Europe/Rome" },
+      { city: "PARÍS", country: "FRANCIA (UTC+1)", lat: 48.8566, lon: 2.3522, timeZone: "Europe/Paris" },
+      { city: "LONDRES", country: "REINO UNIDO (UTC+0)", lat: 51.5074, lon: -0.1278, timeZone: "Europe/London" },
+      { city: "RÍO DE JANEIRO", country: "BRASIL (UTC-3)", lat: -22.9068, lon: -43.1729, timeZone: "America/Sao_Paulo" },
+      { city: "BUENOS AIRES", country: "ARGENTINA (UTC-3)", lat: -34.6037, lon: -58.3816, timeZone: "America/Argentina/Buenos_Aires" },
+      { city: "LIMA", country: "PERÚ • COSTA CENTRAL (UTC-5)", lat: -12.0464, lon: -77.0428, timeZone: "America/Lima" },
+      { city: "CUSCO", country: "PERÚ • SIERRA SUR (UTC-5)", lat: -13.5319, lon: -71.9675, timeZone: "America/Lima" },
+      { city: "AREQUIPA", country: "PERÚ • SUR (UTC-5)", lat: -16.4090, lon: -71.5375, timeZone: "America/Lima" },
+      { city: "IQUITOS", country: "PERÚ • AMAZONÍA (UTC-5)", lat: -3.7437, lon: -73.2516, timeZone: "America/Lima" },
+      { city: "NUEVA YORK", country: "ESTADOS UNIDOS (UTC-5)", lat: 40.7128, lon: -74.0060, timeZone: "America/New_York" },
+      { city: "HONOLULÚ", country: "HAWÁI (UTC-10)", lat: 21.3069, lon: -157.8583, timeZone: "Pacific/Honolulu" }
+    ];
+
+    const WORLD_CHILDREN_TARGET = 2100000000;
+
+    const PREP_STATUS_ITEMS = [
+      { left: "🧝 Duendes: Armado y envoltura de regalos", right: "EN TALLER" },
+      { left: "🛷 Trineo Willax: Patines dorados pulidos", right: "100% ÓPTIMO" },
+      { left: "🧥 Traje de Santa: Abrigo, botas y gorro", right: "LISTO" },
+      { left: "🍪 Galletas y leche: Provisiones de vuelo", right: "CARGADAS" },
+      { left: "🦌 Escuadrón de Renos: Rodolfo y equipo", right: "PREPARADOS" },
+      { left: "🗺️ Mapa de Ruta Perú: Lima, Cusco, Norte y Sur", right: "VERIFICADO" }
+    ];
+
+    let prepSlotIdx = 0;
+    setInterval(() => {
+      if (isFlightActiveMode) return;
+      const slotEl = document.getElementById('prep-rotating-slot');
+      if (!slotEl) return;
+      slotEl.style.opacity = '0';
+      slotEl.style.transform = 'translateY(4px)';
+      setTimeout(() => {
+        prepSlotIdx = (prepSlotIdx + 1) % PREP_STATUS_ITEMS.length;
+        document.getElementById('prep-slot-left').textContent = PREP_STATUS_ITEMS[prepSlotIdx].left;
+        document.getElementById('prep-slot-right').textContent = PREP_STATUS_ITEMS[prepSlotIdx].right;
+        slotEl.style.opacity = '1';
+        slotEl.style.transform = 'translateY(0)';
+      }, 420);
+    }, 5500);
+
+    function getZonedDateParts(dateObj, timeZone) {
+      try {
+        const formatter = new Intl.DateTimeFormat('en-GB', {
+          timeZone: timeZone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+        const parts = formatter.formatToParts(dateObj);
+        let year = 2026, month = 11, day = 25, h = 0, m = 0, s = 0;
+        for (const p of parts) {
+          if (p.type === 'year') year = parseInt(p.value, 10);
+          if (p.type === 'month') month = parseInt(p.value, 10);
+          if (p.type === 'day') day = parseInt(p.value, 10);
+          if (p.type === 'hour') h = parseInt(p.value, 10) % 24;
+          if (p.type === 'minute') m = parseInt(p.value, 10);
+          if (p.type === 'second') s = parseInt(p.value, 10);
+        }
+        return {
+          year, month, day, h, m, s,
+          formatted: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+        };
+      } catch (e) {
+        return { year: 2026, month: 11, day: 25, h: 0, m: 0, s: 0, formatted: "00:00:00" };
+      }
+    }
+
+    let isFlightActiveMode = false;
+    const CAMPAIGN_START_UTC = Date.UTC(2026, 10, 25, 5, 0, 0);
+
+    function updatePeruChristmasCountdown(nowDate) {
+      const peruNow = getZonedDateParts(nowDate, 'America/Lima');
+
+      let targetYear = peruNow.year;
+      if (peruNow.month === 12 && peruNow.day > 25) {
+        targetYear += 1;
+      }
+
+      const xmasPeruEpoch = Date.UTC(targetYear, 11, 25, 5, 0, 0);
+      const departurePeruEpoch = Date.UTC(targetYear, 11, 24, 5, 0, 0);
+      const diffMs = xmasPeruEpoch - nowDate.getTime();
+
+      const gridEl = document.getElementById('peru-xmas-grid');
+      const celebEl = document.getElementById('peru-xmas-celebration');
+      const titleEl = document.getElementById('peru-countdown-title');
+
+      if (peruNow.month === 12 && peruNow.day === 25) {
+        gridEl.classList.add('hidden');
+        celebEl.classList.remove('hidden');
+        titleEl.textContent = `NAVIDAD ${targetYear} EN PERÚ`;
+      } else {
+        gridEl.classList.remove('hidden');
+        celebEl.classList.add('hidden');
+        titleEl.textContent = `FALTA PARA NAVIDAD ${targetYear} EN PERÚ`;
+
+        const safeDiff = Math.max(0, diffMs);
+        const totalSecs = Math.floor(safeDiff / 1000);
+        const days = Math.floor(totalSecs / 86400);
+        const hours = Math.floor((totalSecs % 86400) / 3600);
+        const mins = Math.floor((totalSecs % 3600) / 60);
+        const secs = totalSecs % 60;
+
+        document.getElementById('xmas-days').textContent = String(days).padStart(2, '0');
+        document.getElementById('xmas-hours').textContent = String(hours).padStart(2, '0');
+        document.getElementById('xmas-mins').textContent = String(mins).padStart(2, '0');
+        document.getElementById('xmas-secs').textContent = String(secs).padStart(2, '0');
+      }
+
+      const phaseBadge = document.getElementById('peru-day-phase');
+      if (peruNow.h >= 6 && peruNow.h < 12) phaseBadge.textContent = "Mañana en Lima";
+      else if (peruNow.h >= 12 && peruNow.h < 18) phaseBadge.textContent = "Tarde en Lima";
+      else if (peruNow.h >= 18 && peruNow.h <= 23) phaseBadge.textContent = "Noche en Lima";
+      else phaseBadge.textContent = "Madrugada en Lima";
+
+      isFlightActiveMode = (peruNow.month === 12 && (peruNow.day === 24 || peruNow.day === 25));
+
+      const missionBadge = document.getElementById('mission-badge');
+      const stageNum = document.getElementById('hud-stage-num');
+      const leftMetricLabel = document.getElementById('left-metric-label');
+      const localMetricLabel = document.getElementById('local-metric-label');
+      const metricVal = document.getElementById('hud-local-metric');
+      const presentsLabel = document.getElementById('presents-label');
+      const presentsEl = document.getElementById('hud-presents');
+
+      if (isFlightActiveMode) {
+        missionBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span> Entrega Oficial en Ruta`;
+        stageNum.textContent = `PARADA ${currentIndex + 1} / ${WAYPOINTS.length}`;
+        leftMetricLabel.textContent = "Hora Local Ciudad";
+        localMetricLabel.textContent = "Taller Polo Norte";
+        metricVal.textContent = "100% Completado";
+        presentsLabel.textContent = "Regalos Entregados a Niños del Mundo";
+
+        const flightSpanMs = xmasPeruEpoch - departurePeruEpoch;
+        const flightElapsed = Math.max(0, Math.min(flightSpanMs, nowDate.getTime() - departurePeruEpoch));
+        const deliveredCount = Math.floor((flightElapsed / flightSpanMs) * WORLD_CHILDREN_TARGET);
+        presentsEl.textContent = deliveredCount.toLocaleString('en-US');
+      } else {
+        missionBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Base Polo Norte • Preparativos`;
+        stageNum.textContent = "TALLER ACTIVO";
+        document.getElementById('hud-country').textContent = "ALDEA DE SANTA • POLO NORTE";
+        document.getElementById('hud-city').textContent = "ALISTANDO TRINEO Y REGALOS";
+        leftMetricLabel.textContent = "Despegue Oficial";
+        document.getElementById('hud-local-time').textContent = "24 DIC • 00:00";
+        localMetricLabel.textContent = "Avance Duendes";
+
+        const startEpoch = (targetYear === 2026) ? CAMPAIGN_START_UTC : Date.UTC(targetYear, 10, 25, 5, 0, 0);
+        const totalPrepDurationMs = Math.max(1, departurePeruEpoch - startEpoch);
+        const elapsedPrepMs = Math.max(0, Math.min(totalPrepDurationMs, nowDate.getTime() - startEpoch));
+        const progressRatio = elapsedPrepMs / totalPrepDurationMs;
+
+        const currentGiftsPrepared = Math.floor(progressRatio * WORLD_CHILDREN_TARGET);
+        const prepPct = (progressRatio * 100).toFixed(2);
+
+        metricVal.textContent = `${prepPct}% Listo`;
+        presentsLabel.textContent = "Regalos Armados (Meta: 2.1 Mil Millones)";
+        presentsEl.textContent = currentGiftsPrepared.toLocaleString('en-US');
+      }
+
+      return peruNow;
+    }
+
+    const GLOBE_RADIUS = 5.0;
+
+    function latLonToVector3(lat, lon, radius) {
+      const phi = (90 - lat) * (Math.PI / 180);
+      const theta = (lon + 180) * (Math.PI / 180);
+      return new THREE.Vector3(
+        -(radius * Math.sin(phi) * Math.cos(theta)),
+        (radius * Math.cos(phi)),
+        (radius * Math.sin(phi) * Math.sin(theta))
+      );
+    }
+
+    /* =========================================================================
+       3. TEXTURA SEGURA DEL LOGO WILLAX
+       ========================================================================= */
+    function buildSleighLogoCanvas() {
+      const c = document.createElement('canvas');
+      c.width = 1024; c.height = 380;
+      const ctx = c.getContext('2d');
+
+      function drawProceduralLogo() {
+        ctx.clearRect(0, 0, c.width, c.height);
+        const colors = [
+          ['#e6222b', '#f05a28', '#fdb813', '#fff100'],
+          ['#e2068d', null, null, '#8dc63f'],
+          ['#a04299', null, null, '#00a859'],
+          ['#6b2c91', '#1b439b', '#0072bc', '#009444']
+        ];
+        const startX = 120, startY = 85, s = 48, gap = 4;
+        for (let r = 0; r < 4; r++) {
+          for (let col = 0; col < 4; col++) {
+            if (colors[r][col]) {
+              ctx.fillStyle = colors[r][col];
+              ctx.fillRect(startX + col*(s+gap), startY + r*(s+gap), s, s);
+            }
+          }
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 175px Montserrat, sans-serif';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('willax', 370, 195);
+      }
+
+      drawProceduralLogo();
+      const tex = new THREE.CanvasTexture(c);
+      tex.anisotropy = 8;
+
+      const img = new Image();
+      img.onload = () => {
+        try {
+          ctx.clearRect(0, 0, c.width, c.height);
+          const ratio = Math.min(c.width / img.width, c.height / img.height);
+          const w = img.width * ratio;
+          const h = img.height * ratio;
+          ctx.drawImage(img, (c.width - w) / 2, (c.height - h) / 2, w, h);
+          tex.needsUpdate = true;
+        } catch (err) {
+          drawProceduralLogo();
+          tex.needsUpdate = true;
+        }
+      };
+      img.src = './logo-willax-blanco.png';
+
+      return tex;
+    }
+
+    const sleighLogoTexture = buildSleighLogoCanvas();
+
+    function createCandyCaneTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, 128, 256);
+      ctx.fillStyle = '#dc2626';
+      for (let y = -128; y < 384; y += 48) {
+        ctx.beginPath();
+        ctx.moveTo(0, y); ctx.lineTo(128, y + 64);
+        ctx.lineTo(128, y + 88); ctx.lineTo(0, y + 24);
+        ctx.closePath(); ctx.fill();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    /* =========================================================================
+       4. INICIALIZACIÓN ESCENA Y ENCUADRE DESPLAZADO A LA DERECHA
+       ========================================================================= */
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x062342);
+    scene.fog = new THREE.FogExp2(0x062342, 0.016);
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    function applyCameraScreenOffset() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const leftPanelShift = w >= 768 ? w * 0.18 : 0;
+      camera.setViewOffset(w, h, -leftPanelShift, 0, w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    applyCameraScreenOffset();
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.minDistance = 4.2;
+    controls.maxDistance = 24;
+    controls.enabled = false;
+
+    const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x0c2d48, 0.95);
+    scene.add(hemiLight);
+
+    const keyLight = new THREE.DirectionalLight(0xfffbeb, 1.35);
+    keyLight.position.set(12, 18, 14);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.55);
+    fillLight.position.set(-14, 6, -10);
+    scene.add(fillLight);
+
+    const bgDomeGeo = new THREE.IcosahedronGeometry(45, 3);
+    const bgDomeMat = new THREE.MeshStandardMaterial({
+      color: 0x07294d,
+      flatShading: true,
+      side: THREE.BackSide,
+      roughness: 0.9
+    });
+    scene.add(new THREE.Mesh(bgDomeGeo, bgDomeMat));
+
+    /* =========================================================================
+       5. GLOBO LOW-POLY + ALDEA DEL POLO NORTE
+       ========================================================================= */
+    const earthGroup = new THREE.Group();
+    scene.add(earthGroup);
+
+    const oceanGeo = new THREE.IcosahedronGeometry(GLOBE_RADIUS, 4);
+    const oceanMat = new THREE.MeshStandardMaterial({
+      color: 0x46a2d4,
+      flatShading: true,
+      roughness: 0.65,
+      metalness: 0.05
+    });
+    const oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
+    oceanMesh.receiveShadow = true;
+    earthGroup.add(oceanMesh);
+
+    const clayGreenMat = new THREE.MeshStandardMaterial({
+      color: 0x2e8b57,
+      roughness: 0.85,
+      metalness: 0.02,
+      flatShading: false
+    });
+
+    const continentClusters = [
+      { lat: 42, lon: -102, blobs: [[0,0,1.25], [8,-12,0.95], [-10,8,0.85], [14,12,0.8]] },
+      { lat: -15, lon: -58, blobs: [[0,0,1.15], [-12,-4,0.85], [8,-8,0.9], [-22,-6,0.65]] },
+      { lat: 48, lon: 14, blobs: [[0,0,0.85], [6,12,0.8], [-4,-6,0.65]] },
+      { lat: 6, lon: 20, blobs: [[0,0,1.25], [-14,4,0.95], [10,-8,0.95], [-24,2,0.7]] },
+      { lat: 44, lon: 92, blobs: [[0,0,1.55], [-12,-14,1.15], [-14,14,1.1], [8,24,1.0], [-22,8,0.8]] },
+      { lat: -25, lon: 135, blobs: [[0,0,0.95], [-4,10,0.75]] }
+    ];
+
+    continentClusters.forEach(cont => {
+      cont.blobs.forEach(b => {
+        const pos = latLonToVector3(cont.lat + b[0], cont.lon + b[1], GLOBE_RADIUS * 0.985);
+        const blobGeo = new THREE.DodecahedronGeometry(b[2], 2);
+        const posAttr = blobGeo.attributes.position;
+        for (let i = 0; i < posAttr.count; i++) {
+          const vx = posAttr.getX(i), vy = posAttr.getY(i), vz = posAttr.getZ(i);
+          const noise = 0.9 + 0.18 * Math.sin(vx * 3.1 + vy * 2.4) * Math.cos(vz * 2.8);
+          posAttr.setXYZ(i, vx * noise, vy * 0.32, vz * noise);
+        }
+        blobGeo.computeVertexNormals();
+
+        const blobMesh = new THREE.Mesh(blobGeo, clayGreenMat);
+        blobMesh.position.copy(pos);
+        blobMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), pos.clone().normalize());
+        blobMesh.castShadow = true;
+        blobMesh.receiveShadow = true;
+        earthGroup.add(blobMesh);
+      });
+    });
+
+    const northPoleGroup = new THREE.Group();
+    northPoleGroup.position.set(0, GLOBE_RADIUS * 0.955, 0);
+    earthGroup.add(northPoleGroup);
+
+    const snowClayMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.85, flatShading: true });
+    const mountainMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.75, flatShading: true });
+    const cabinWoodMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.85, flatShading: true });
+    const cabinRedMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.55, flatShading: true });
+    const pineGreenMat = new THREE.MeshStandardMaterial({ color: 0x2d6a4f, roughness: 0.75, flatShading: true });
+
+    const baseSnow1 = new THREE.Mesh(new THREE.CylinderGeometry(2.05, 2.35, 0.35, 12), snowClayMat);
+    baseSnow1.position.y = 0.12;
+    baseSnow1.receiveShadow = true;
+    northPoleGroup.add(baseSnow1);
+
+    const baseSnow2 = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.85, 0.32, 11), snowClayMat);
+    baseSnow2.position.y = 0.36;
+    baseSnow2.receiveShadow = true;
+    northPoleGroup.add(baseSnow2);
+
+    const peaks = [
+      { x: -0.75, z: -0.75, r: 0.45, h: 1.15 },
+      { x: -0.15, z: -0.88, r: 0.54, h: 1.48 },
+      { x:  0.48, z: -0.72, r: 0.44, h: 1.15 },
+      { x:  0.92, z: -0.52, r: 0.36, h: 0.88 }
+    ];
+    peaks.forEach(p => {
+      const m = new THREE.Mesh(new THREE.ConeGeometry(p.r, p.h, 5), mountainMat);
+      m.position.set(p.x, 0.45 + p.h / 2, p.z);
+      m.castShadow = true;
+      northPoleGroup.add(m);
+    });
+
+    const poleStick = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.075, 0.68, 12),
+      new THREE.MeshStandardMaterial({ map: createCandyCaneTexture(), roughness: 0.4 })
+    );
+    poleStick.position.set(-0.95, 0.82, -0.15);
+    northPoleGroup.add(poleStick);
+
+    const poleTopBall = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), cabinRedMat);
+    poleTopBall.position.set(-0.95, 1.2, -0.15);
+    northPoleGroup.add(poleTopBall);
+
+    function createNorthPoleCabin(w, h, d, x, z, rotY = 0) {
+      const cGroup = new THREE.Group();
+      const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), cabinWoodMat);
+      walls.position.y = h / 2;
+      walls.castShadow = true;
+      cGroup.add(walls);
+
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.82, h * 0.85, 4), cabinRedMat);
+      roof.position.y = h + (h * 0.42);
+      roof.rotation.y = Math.PI / 4;
+      roof.castShadow = true;
+      cGroup.add(roof);
+
+      const door = new THREE.Mesh(
+        new THREE.PlaneGeometry(w * 0.32, h * 0.55),
+        new THREE.MeshBasicMaterial({ color: 0xfef08a })
+      );
+      door.position.set(0, h * 0.28, d / 2 + 0.01);
+      cGroup.add(door);
+
+      cGroup.position.set(x, 0.5, z);
+      cGroup.rotation.y = rotY;
+      northPoleGroup.add(cGroup);
+    }
+
+    createNorthPoleCabin(0.46, 0.38, 0.46, -0.58, -0.35, 0.2);
+    createNorthPoleCabin(0.52, 0.44, 0.48, 0.45, -0.38, -0.2);
+    createNorthPoleCabin(0.24, 0.20, 0.24, -1.05, 0.22, 0.35);
+    createNorthPoleCabin(0.24, 0.20, 0.24, 1.05, 0.18, -0.35);
+
+    const pineCoords = [
+      [-1.38, 0.45, 0.28], [-1.18, -0.45, 0.32], [1.28, 0.42, 0.30],
+      [1.35, -0.35, 0.28], [0.0, -0.52, 0.26]
+    ];
+    pineCoords.forEach(pc => {
+      const pine = new THREE.Mesh(new THREE.ConeGeometry(0.11, pc[2] * 1.4, 5), pineGreenMat);
+      pine.position.set(pc[0], 0.48 + pc[2] * 0.55, pc[1]);
+      pine.castShadow = true;
+      northPoleGroup.add(pine);
+    });
+
+    const workshopPrepGroup = new THREE.Group();
+    workshopPrepGroup.position.set(0, 0.52, 0);
+    northPoleGroup.add(workshopPrepGroup);
+
+    const elfTunicGreen = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.65, flatShading: true });
+    const elfTunicRed = new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.65, flatShading: true });
+    const skinClay = new THREE.MeshStandardMaterial({ color: 0xfed7aa, roughness: 0.7, flatShading: true });
+    const elfGoldMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.4, flatShading: true });
+
+    const elvesList = [];
+    function createWorkshopElf(x, z, rotY, isRedSuit = false, hasGiftBox = true) {
+      const elf = new THREE.Group();
+      elf.position.set(x, 0, z);
+      elf.rotation.y = rotY;
+      elf.scale.set(0.68, 0.68, 0.68);
+
+      const body = new THREE.Mesh(new THREE.ConeGeometry(0.085, 0.19, 6), isRedSuit ? elfTunicRed : elfTunicGreen);
+      body.position.y = 0.095;
+      body.castShadow = true;
+      elf.add(body);
+
+      const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.06, 1), skinClay);
+      head.position.y = 0.22;
+      elf.add(head);
+
+      const hat = new THREE.Mesh(new THREE.ConeGeometry(0.062, 0.14, 5), isRedSuit ? elfTunicGreen : elfTunicRed);
+      hat.position.set(-0.01, 0.30, 0);
+      hat.rotation.z = 0.22;
+      elf.add(hat);
+
+      const pom = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), elfGoldMat);
+      pom.position.set(-0.04, 0.36, 0);
+      elf.add(pom);
+
+      const arms = new THREE.Group();
+      arms.position.set(0, 0.15, 0);
+      if (hasGiftBox) {
+        const gift = new THREE.Mesh(
+          new THREE.BoxGeometry(0.085, 0.085, 0.085),
+          new THREE.MeshStandardMaterial({ color: isRedSuit ? 0xfbbf24 : 0xef4444, flatShading: true })
+        );
+        gift.position.set(0.075, 0, 0);
+        arms.add(gift);
+      }
+      elf.add(arms);
+
+      workshopPrepGroup.add(elf);
+      elvesList.push({ mesh: elf, arms: arms, phase: Math.random() * Math.PI * 2 });
+      return elf;
+    }
+
+    createWorkshopElf(-0.65, 0.40, 0.5, false, true);
+    createWorkshopElf(-0.38, 0.65, 1.2, true, true);
+    createWorkshopElf(0.15, 0.72, 2.2, false, true);
+    createWorkshopElf(0.68, 0.55, 2.8, true, false);
+    createWorkshopElf(0.85, 0.12, -2.5, false, true);
+
+    const boxPalette = [0xef4444, 0x10b981, 0xfbbf24, 0x3b82f6];
+    const pileCoords = [
+      [-0.78, 0.15, 0.10], [-0.68, 0.22, 0.085], [-0.74, 0.20, 0.075],
+      [-0.48, 0.52, 0.095], [-0.56, 0.48, 0.075], [0.28, 0.62, 0.085]
+    ];
+    pileCoords.forEach((pc, idx) => {
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(pc[2], pc[2], pc[2]),
+        new THREE.MeshStandardMaterial({ color: boxPalette[idx % boxPalette.length], flatShading: true })
+      );
+      box.position.set(pc[0], pc[2] / 2, pc[1]);
+      box.rotation.y = idx * 0.6;
+      box.castShadow = true;
+      workshopPrepGroup.add(box);
+    });
+
+    const snackTableGroup = new THREE.Group();
+    snackTableGroup.position.set(-0.28, 0, 0.42);
+
+    const tableTop = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.02, 8), cabinWoodMat);
+    tableTop.position.y = 0.14;
+    tableTop.castShadow = true;
+    snackTableGroup.add(tableTop);
+
+    const tableLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, 0.14, 6), cabinWoodMat);
+    tableLeg.position.y = 0.07;
+    snackTableGroup.add(tableLeg);
+
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.045, 0.012, 10), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+    plate.position.set(-0.03, 0.155, 0.01);
+    snackTableGroup.add(plate);
+
+    const cookieMat = new THREE.MeshStandardMaterial({ color: 0xc2813e, roughness: 0.8 });
+    [[-0.04, 0.165, 0.02], [-0.015, 0.165, -0.005], [-0.03, 0.175, 0.008]].forEach(cp => {
+      const cookie = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.008, 8), cookieMat);
+      cookie.position.set(cp[0], cp[1], cp[2]);
+      snackTableGroup.add(cookie);
+    });
+
+    const milkGlass = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.022, 0.018, 0.055, 10),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2 })
+    );
+    milkGlass.position.set(0.05, 0.178, -0.02);
+    snackTableGroup.add(milkGlass);
+
+    workshopPrepGroup.add(snackTableGroup);
+
+    const suitRackGroup = new THREE.Group();
+    suitRackGroup.position.set(-0.36, 0, -0.05);
+    suitRackGroup.rotation.y = 0.25;
+
+    const rackPole = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.026, 0.45, 6), cabinWoodMat);
+    rackPole.position.y = 0.225;
+    suitRackGroup.add(rackPole);
+
+    const rackCross = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.022, 0.022), cabinWoodMat);
+    rackCross.position.y = 0.40;
+    suitRackGroup.add(rackCross);
+
+    const hangingCoat = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.25, 6), cabinRedMat);
+    hangingCoat.position.set(0, 0.27, 0);
+    suitRackGroup.add(hangingCoat);
+
+    const hangingHat = new THREE.Mesh(new THREE.ConeGeometry(0.058, 0.14, 6), cabinRedMat);
+    hangingHat.position.set(0.01, 0.49, 0);
+    hangingHat.rotation.z = -0.25;
+    suitRackGroup.add(hangingHat);
+
+    workshopPrepGroup.add(suitRackGroup);
+
+    /* =========================================================================
+       6. RUTA DE VUELO Y BALIZAS
+       ========================================================================= */
+    const ROUTE_ALTITUDE = GLOBE_RADIUS * 1.055;
+    const waypoints3D = WAYPOINTS.map(w => latLonToVector3(w.lat, w.lon, ROUTE_ALTITUDE));
+
+    function getGeodesicArc(p1, p2, segments = 45, peakAlt = 0.45) {
+      const points = [];
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const v = new THREE.Vector3().lerpVectors(p1, p2, t).normalize();
+        v.multiplyScalar(ROUTE_ALTITUDE + Math.sin(t * Math.PI) * peakAlt);
+        points.push(v);
+      }
+      return points;
+    }
+
+    const completedCurvePoints = [];
+    for (let i = 0; i < waypoints3D.length - 1; i++) {
+      completedCurvePoints.push(...getGeodesicArc(waypoints3D[i], waypoints3D[i+1]));
+    }
+    const plannedRouteLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(completedCurvePoints),
+      new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.22 })
+    );
+    earthGroup.add(plannedRouteLine);
+
+    const activeRouteGeo = new THREE.BufferGeometry();
+    const activeRouteLine = new THREE.Line(activeRouteGeo, new THREE.LineBasicMaterial({ color: 0xfbbf24 }));
+    earthGroup.add(activeRouteLine);
+
+    const radarRings = [];
+    WAYPOINTS.forEach((wp) => {
+      const pos = latLonToVector3(wp.lat, wp.lon, GLOBE_RADIUS * 1.015);
+      const beaconGroup = new THREE.Group();
+      beaconGroup.position.copy(pos);
+      beaconGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), pos.clone().normalize());
+
+      const pin = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.25, 5), new THREE.MeshStandardMaterial({ color: 0xef4444, flatShading: true }));
+      pin.rotation.x = Math.PI;
+      pin.position.y = 0.16;
+      beaconGroup.add(pin);
+
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.045, 0.14, 16),
+        new THREE.MeshBasicMaterial({ color: 0xfef08a, side: THREE.DoubleSide, transparent: true, opacity: 0.75 })
+      );
+      ring.rotation.x = Math.PI / 2;
+      beaconGroup.add(ring);
+
+      earthGroup.add(beaconGroup);
+      radarRings.push(ring);
+    });
+
+    /* =========================================================================
+       7. TRINEO, SANTA Y RENOS
+       ========================================================================= */
+    const santaFlightGroup = new THREE.Group();
+    earthGroup.add(santaFlightGroup);
+
+    const SLEIGH_SCALE = 0.174;
+    const sleighSubGroup = new THREE.Group();
+    sleighSubGroup.scale.set(SLEIGH_SCALE, SLEIGH_SCALE, SLEIGH_SCALE);
+    santaFlightGroup.add(sleighSubGroup);
+
+    const sleighRedMat = new THREE.MeshStandardMaterial({ color: 0xc81d25, roughness: 0.55, flatShading: true });
+    const sleighTrimGoldMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4, metalness: 0.35, flatShading: true });
+    const sleighSideDarkMat = new THREE.MeshStandardMaterial({ color: 0x7f1d1d, roughness: 0.65, flatShading: true });
+    const whiteClayMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.85, flatShading: true });
+    const deerClayMat = new THREE.MeshStandardMaterial({ color: 0xb07d56, roughness: 0.75, flatShading: true });
+    const antlerClayMat = new THREE.MeshStandardMaterial({ color: 0xfde68a, roughness: 0.65, flatShading: true });
+
+    const carriageGroup = new THREE.Group();
+
+    const hullShape = new THREE.Shape();
+    hullShape.moveTo(-1.35, 0.45);
+    hullShape.lineTo(-1.45, 1.35);
+    hullShape.lineTo(-0.75, 1.45);
+    hullShape.lineTo(-0.35, 0.95);
+    hullShape.lineTo(0.65, 0.95);
+    hullShape.lineTo(1.25, 1.25);
+    hullShape.lineTo(1.42, 0.72);
+    hullShape.lineTo(1.05, 0.42);
+    hullShape.closePath();
+
+    const hullGeo = new THREE.ExtrudeGeometry(hullShape, {
+      steps: 1, depth: 0.96, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 1
+    });
+    const hullMesh = new THREE.Mesh(hullGeo, sleighRedMat);
+    hullMesh.position.z = -0.48;
+    hullMesh.castShadow = true;
+    carriageGroup.add(hullMesh);
+
+    const sideBoardGeo = new THREE.BoxGeometry(1.45, 0.46, 1.08);
+    const sideBoard = new THREE.Mesh(sideBoardGeo, sleighSideDarkMat);
+    sideBoard.position.set(0.08, 0.68, 0);
+    carriageGroup.add(sideBoard);
+
+    const logoPlaneGeo = new THREE.PlaneGeometry(1.32, 0.48);
+    const logoPlaneMat = new THREE.MeshBasicMaterial({ map: sleighLogoTexture, transparent: true });
+
+    const logoSideR = new THREE.Mesh(logoPlaneGeo, logoPlaneMat);
+    logoSideR.position.set(0.08, 0.68, 0.55);
+    carriageGroup.add(logoSideR);
+
+    const logoSideL = new THREE.Mesh(logoPlaneGeo, logoPlaneMat);
+    logoSideL.position.set(0.08, 0.68, -0.55);
+    logoSideL.rotation.y = Math.PI;
+    carriageGroup.add(logoSideL);
+
+    [-0.48, 0.48].forEach(zPos => {
+      const pts = [
+        new THREE.Vector3(-1.55, 0.32, zPos),
+        new THREE.Vector3(-1.15, 0.1, zPos),
+        new THREE.Vector3(1.15, 0.1, zPos),
+        new THREE.Vector3(1.62, 0.45, zPos),
+        new THREE.Vector3(1.42, 0.75, zPos)
+      ];
+      const runnerCurve = new THREE.CatmullRomCurve3(pts);
+      const runnerMesh = new THREE.Mesh(new THREE.TubeGeometry(runnerCurve, 12, 0.055, 5, false), sleighTrimGoldMat);
+      carriageGroup.add(runnerMesh);
+
+      [-0.75, 0.05, 0.85].forEach(px => {
+        const strut = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.36, 0.08), sleighTrimGoldMat);
+        strut.position.set(px, 0.28, zPos);
+        carriageGroup.add(strut);
+      });
+    });
+
+    sleighSubGroup.add(carriageGroup);
+
+    const sack = new THREE.Mesh(new THREE.IcosahedronGeometry(0.62, 1), new THREE.MeshStandardMaterial({ color: 0xa16207, roughness: 0.9, flatShading: true }));
+    sack.scale.set(1.1, 1.3, 1.05);
+    sack.position.set(-0.78, 1.25, 0);
+    sleighSubGroup.add(sack);
+
+    for (let i = 0; i < 5; i++) {
+      const gift = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.28, 0.28),
+        new THREE.MeshStandardMaterial({ color: boxPalette[i % boxPalette.length], flatShading: true })
+      );
+      gift.position.set(-0.78 + (Math.random() - 0.5) * 0.4, 1.7 + i * 0.07, (Math.random() - 0.5) * 0.4);
+      gift.rotation.set(Math.random(), Math.random(), Math.random());
+      sleighSubGroup.add(gift);
+    }
+
+    const santaGroup = new THREE.Group();
+    santaGroup.position.set(-0.1, 0.88, 0);
+
+    const torso = new THREE.Mesh(new THREE.DodecahedronGeometry(0.44, 1), sleighRedMat);
+    torso.scale.set(1.05, 1.15, 1.05);
+    torso.position.y = 0.36;
+    santaGroup.add(torso);
+
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.12, 12), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+    belt.position.y = 0.32;
+    santaGroup.add(belt);
+
+    const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.23, 1), new THREE.MeshStandardMaterial({ color: 0xfed7aa, flatShading: true }));
+    head.position.set(0.08, 0.86, 0);
+    santaGroup.add(head);
+
+    const beard = new THREE.Mesh(new THREE.ConeGeometry(0.27, 0.56, 6), whiteClayMat);
+    beard.rotation.z = -Math.PI / 3.2;
+    beard.position.set(0.26, 0.74, 0);
+    santaGroup.add(beard);
+
+    const hat = new THREE.Mesh(new THREE.ConeGeometry(0.23, 0.54, 6), sleighRedMat);
+    hat.rotation.z = -Math.PI / 3.5;
+    hat.position.set(0.02, 1.15, 0);
+    santaGroup.add(hat);
+
+    const pompom = new THREE.Mesh(new THREE.IcosahedronGeometry(0.09, 0), whiteClayMat);
+    pompom.position.set(-0.22, 1.22, 0);
+    santaGroup.add(pompom);
+
+    sleighSubGroup.add(santaGroup);
+
+    const reindeerSquad = [];
+    function createLowPolyReindeer(isLead) {
+      const rGroup = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.48, 0.44), deerClayMat);
+      body.position.y = 0.65;
+      rGroup.add(body);
+
+      const neck = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.48, 0.28), deerClayMat);
+      neck.rotation.z = -0.45;
+      neck.position.set(0.45, 0.92, 0);
+      rGroup.add(neck);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.26, 0.26), deerClayMat);
+      head.position.set(0.66, 1.12, 0);
+      rGroup.add(head);
+
+      const nose = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(isLead ? 0.085 : 0.05, 0),
+        isLead ? new THREE.MeshBasicMaterial({ color: 0xff2a2a }) : new THREE.MeshStandardMaterial({ color: 0x1e293b })
+      );
+      nose.position.set(0.89, 1.1, 0);
+      rGroup.add(nose);
+
+      [-0.1, 0.1].forEach(az => {
+        const antler = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.42, 4), antlerClayMat);
+        antler.position.set(0.58, 1.38, az);
+        antler.rotation.z = 0.25;
+        rGroup.add(antler);
+      });
+
+      const legPivots = [];
+      [[-0.32, -0.16], [-0.32, 0.16], [0.32, -0.16], [0.32, 0.16]].forEach(lp => {
+        const p = new THREE.Group();
+        p.position.set(lp[0], 0.45, lp[1]);
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.48, 0.11), deerClayMat);
+        leg.position.y = -0.22;
+        p.add(leg);
+        rGroup.add(p);
+        legPivots.push(p);
+      });
+
+      rGroup.userData = { legs: legPivots, offset: Math.random() * 4 };
+      return rGroup;
+    }
+
+    [
+      { x: 1.65, z: -0.38, lead: false },
+      { x: 1.65, z:  0.38, lead: false },
+      { x: 3.15, z: -0.38, lead: false },
+      { x: 3.15, z:  0.38, lead: true }
+    ].forEach(cfg => {
+      const r = createLowPolyReindeer(cfg.lead);
+      r.position.set(cfg.x, 0, cfg.z);
+      sleighSubGroup.add(r);
+      reindeerSquad.push(r);
+    });
+
+    const giftTrail = [];
+    for (let i = 0; i < 7; i++) {
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(0.32, 0.32, 0.32),
+        new THREE.MeshStandardMaterial({ color: boxPalette[i % boxPalette.length], flatShading: true })
+      );
+      sleighSubGroup.add(box);
+      giftTrail.push({
+        mesh: box,
+        baseX: -1.45 - (i * 0.55),
+        offsetY: (Math.random() - 0.5) * 0.5 + 0.55,
+        offsetZ: (Math.random() - 0.5) * 0.7,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    /* =========================================================================
+       8. REPERTORIO DE VILLANCICOS EN LOOP CONTINUO
+       ========================================================================= */
+    let audioContext = null;
+    let musicLoopRunning = false;
+    let musicStepTimer = null;
+    let noteIndex = 0;
+
+    const NOTES = {
+      C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
+      C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00, REST: 0
+    };
+
+    const CHRISTMAS_SCORE = [
+      ['E5', 'C4', 1], ['E5', 'G4', 1], ['E5', 'C4', 2],
+      ['E5', 'C4', 1], ['E5', 'G4', 1], ['E5', 'C4', 2],
+      ['E5', 'C4', 1], ['G5', 'E4', 1], ['C5', 'G4', 1.5], ['D5', 'G4', 0.5],
+      ['E5', 'C4', 4],
+      ['F5', 'F4', 1], ['F5', 'A4', 1], ['F5', 'F4', 1.5], ['F5', 'A4', 0.5],
+      ['F5', 'C4', 1], ['E5', 'G4', 1], ['E5', 'C4', 1], ['E5', 'E4', 0.5], ['E5', 'G4', 0.5],
+      ['G5', 'G4', 1], ['G5', 'B4', 1], ['F5', 'D5', 1], ['D5', 'G4', 1],
+      ['C5', 'C4', 3], ['REST', 'G4', 2],
+
+      ['G4', 'C4', 1.5], ['A4', 'E4', 0.5], ['G4', 'G4', 1], ['E4', 'C4', 3],
+      ['G4', 'C4', 1.5], ['A4', 'E4', 0.5], ['G4', 'G4', 1], ['E4', 'C4', 3],
+      ['D5', 'G4', 2], ['D5', 'B4', 1], ['B4', 'G4', 3],
+      ['C5', 'C4', 2], ['C5', 'E4', 1], ['G4', 'C4', 3],
+      ['A4', 'F4', 2], ['A4', 'A4', 1], ['C5', 'F4', 1.5], ['B4', 'A4', 0.5], ['A4', 'F4', 1],
+      ['G4', 'C4', 1.5], ['A4', 'E4', 0.5], ['G4', 'G4', 1], ['E4', 'C4', 3],
+      ['D5', 'G4', 2], ['D5', 'B4', 1], ['F5', 'G4', 1.5], ['D5', 'B4', 0.5], ['B4', 'G4', 1],
+      ['C5', 'C4', 3], ['E5', 'G4', 3],
+      ['C5', 'C4', 1.5], ['G4', 'E4', 0.5], ['E4', 'C4', 1], ['G4', 'G4', 1.5], ['F4', 'B4', 0.5], ['D4', 'G4', 1],
+      ['C4', 'C4', 4], ['REST', 'G4', 2],
+
+      ['G4', 'C4', 1], ['C5', 'C4', 1], ['C5', 'E4', 0.5], ['D5', 'G4', 0.5], ['C5', 'E4', 0.5], ['B4', 'D4', 0.5],
+      ['A4', 'F4', 1], ['A4', 'A4', 1], ['A4', 'F4', 1],
+      ['D5', 'G4', 1], ['D5', 'B4', 0.5], ['E5', 'D5', 0.5], ['D5', 'B4', 0.5], ['C5', 'G4', 0.5],
+      ['B4', 'E4', 1], ['G4', 'G4', 1], ['G4', 'E4', 1],
+      ['E5', 'A4', 1], ['E5', 'C5', 0.5], ['F5', 'E5', 0.5], ['E5', 'C5', 0.5], ['D5', 'A4', 0.5],
+      ['C5', 'F4', 1], ['A4', 'A4', 1], ['G4', 'G4', 0.5], ['G4', 'G4', 0.5],
+      ['A4', 'F4', 1], ['D5', 'G4', 1], ['B4', 'G4', 1],
+      ['C5', 'C4', 4], ['REST', 'G4', 3]
+    ];
+
+    function triggerBellVoice(freq, durationSec, volume, type = 'sine') {
+      if (!audioContext || freq <= 0) return;
+      const now = audioContext.currentTime;
+      const osc = audioContext.createOscillator();
+      const harmonic = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+
+      harmonic.type = 'triangle';
+      harmonic.frequency.setValueAtTime(freq * 2, now);
+
+      const harmGain = audioContext.createGain();
+      harmGain.gain.setValueAtTime(volume * 0.2, now);
+      harmGain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec * 0.7);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(volume, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec * 1.4);
+
+      osc.connect(gain);
+      harmonic.connect(harmGain);
+      harmGain.connect(gain);
+      gain.connect(audioContext.destination);
+
+      osc.start(now);
+      harmonic.start(now);
+      osc.stop(now + durationSec * 1.45);
+      harmonic.stop(now + durationSec * 1.45);
+    }
+
+    function scheduleNextChristmasNote() {
+      if (!musicLoopRunning) return;
+      const [melodyNote, bassNote, beats] = CHRISTMAS_SCORE[noteIndex];
+      const beatDurationMs = 390;
+      const stepMs = beats * beatDurationMs;
+      const durSec = stepMs / 1000;
+
+      if (NOTES[melodyNote]) triggerBellVoice(NOTES[melodyNote], durSec, 0.058, 'sine');
+      if (NOTES[bassNote]) triggerBellVoice(NOTES[bassNote], durSec * 1.15, 0.022, 'triangle');
+
+      noteIndex = (noteIndex + 1) % CHRISTMAS_SCORE.length;
+      musicStepTimer = setTimeout(scheduleNextChristmasNote, stepMs);
+    }
+
+    function updateAudioButtonUI() {
+      const label = document.getElementById('audio-state-text');
+      const icon = document.getElementById('audio-icon');
+      const btn = document.getElementById('ctrl-audio');
+      if (musicLoopRunning) {
+        icon.textContent = "🎶";
+        label.textContent = "Música ON";
+        btn.classList.add('bg-emerald-600/80', 'border', 'border-emerald-400/50');
+        btn.classList.remove('bg-white/10');
+      } else {
+        icon.textContent = "🔇";
+        label.textContent = "Música Off";
+        btn.classList.remove('bg-emerald-600/80', 'border', 'border-emerald-400/50');
+        btn.classList.add('bg-white/10');
+      }
+    }
+
+    function startChristmasMusic() {
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === 'suspended') audioContext.resume();
+      if (!musicLoopRunning) {
+        musicLoopRunning = true;
+        updateAudioButtonUI();
+        scheduleNextChristmasNote();
+      }
+    }
+
+    function stopChristmasMusic() {
+      musicLoopRunning = false;
+      clearTimeout(musicStepTimer);
+      updateAudioButtonUI();
+    }
+
+    document.getElementById('ctrl-audio').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (musicLoopRunning) {
+        stopChristmasMusic();
+        window.__userMutedManually = true;
+      } else {
+        window.__userMutedManually = false;
+        startChristmasMusic();
+      }
+    });
+
+    window.addEventListener('pointerdown', () => {
+      if (!musicLoopRunning && !window.__userMutedManually) startChristmasMusic();
+    }, { once: true });
+
+    /* =========================================================================
+       9. NIEVE EN PANTALLA
+       ========================================================================= */
+    const snowOverlay = document.getElementById('snow-overlay');
+    const snowElements = [];
+    for (let i = 0; i < 36; i++) {
+      const el = document.createElement('div');
+      el.className = 'snow-dot';
+      const sz = Math.random() * 4 + 2;
+      el.style.width = sz + 'px'; el.style.height = sz + 'px';
+      el.style.opacity = (Math.random() * 0.7 + 0.3).toString();
+      snowOverlay.appendChild(el);
+      snowElements.push({
+        el,
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        vy: Math.random() * 1.4 + 0.7,
+        sway: Math.random() * 4
+      });
+    }
+
+    /* =========================================================================
+       10. MODO DIRECTOR TV AUTOMÁTICO 24/7 + POSICIONAMIENTO EN ALDEA POLO NORTE
+       ========================================================================= */
+    let currentIndex = 0, flightProgress = 0;
+    let isAutoDirector = true;
+    let activeCameraShot = 'northpole';
+    let directorTimerSec = 0;
+
+    function updateFlightHUDData() {
+      if (!isFlightActiveMode) return;
+      const cur = WAYPOINTS[currentIndex];
+      const nxt = WAYPOINTS[(currentIndex + 1) % WAYPOINTS.length];
+      const prv = WAYPOINTS[(currentIndex - 1 + WAYPOINTS.length) % WAYPOINTS.length];
+      document.getElementById('hud-city').textContent = cur.city;
+      document.getElementById('hud-country').textContent = cur.country;
+      document.getElementById('hud-stage-num').textContent = `PARADA ${currentIndex + 1} / ${WAYPOINTS.length}`;
+      document.getElementById('prep-slot-left').textContent = `De: ${prv.city} ➔ ${nxt.city}`;
+      document.getElementById('prep-slot-right').textContent = "EN RUTA";
+    }
+
+    function initScenePosition() {
+      const now = new Date();
+      updatePeruChristmasCountdown(now);
+
+      if (!isFlightActiveMode) {
+        santaFlightGroup.position.set(0.18, GLOBE_RADIUS * 0.955 + 0.51, 0.25);
+        santaFlightGroup.rotation.set(0, 0.22, 0);
+
+        santaGroup.scale.set(1.55, 1.55, 1.55);
+        santaGroup.position.set(-1.55, 0.05, 1.45);
+        santaGroup.rotation.y = 0.85;
+
+        giftTrail.forEach(g => g.mesh.visible = false);
+
+        camera.position.set(0.4, 7.1, 4.8);
+        camera.lookAt(new THREE.Vector3(0, 5.25, 0));
+      } else {
+        santaGroup.scale.set(1, 1, 1);
+        camera.position.set(0, 6.5, 11.5);
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
+      }
+    }
+
+    const btnAuto = document.getElementById('cam-auto-btn');
+    const btnNorth = document.getElementById('cam-northpole-btn');
+    const btnWillax = document.getElementById('cam-willax-btn');
+    const btnTactical = document.getElementById('cam-tactical-btn');
+    const directorBadge = document.getElementById('director-badge');
+
+    function resetCamBtns() {
+      [btnAuto, btnNorth, btnWillax, btnTactical].forEach(b => {
+        b.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-300";
+      });
+    }
+
+    btnAuto.addEventListener('click', () => {
+      isAutoDirector = true;
+      controls.enabled = false;
+      directorTimerSec = 0;
+      activeCameraShot = 'northpole';
+      resetCamBtns();
+      btnAuto.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-black font-black shadow";
+      directorBadge.textContent = "AUTO TV";
+    });
+
+    btnNorth.addEventListener('click', () => {
+      isAutoDirector = false;
+      activeCameraShot = 'northpole';
+      controls.enabled = false;
+      resetCamBtns();
+      btnNorth.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-sky-500 text-white shadow";
+      directorBadge.textContent = "MANUAL";
+    });
+
+    btnWillax.addEventListener('click', () => {
+      isAutoDirector = false;
+      activeCameraShot = 'willax';
+      controls.enabled = false;
+      resetCamBtns();
+      btnWillax.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500 text-black font-black shadow";
+      directorBadge.textContent = "MANUAL";
+    });
+
+    btnTactical.addEventListener('click', () => {
+      isAutoDirector = false;
+      activeCameraShot = 'free';
+      controls.enabled = true;
+      resetCamBtns();
+      btnTactical.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500 text-black font-black shadow";
+      directorBadge.textContent = "LIBRE";
+    });
+
+    let lastTimestamp = performance.now();
+    let lastUiSecond = -1;
+
+    function animate(nowTime) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((nowTime - lastTimestamp) / 1000, 0.1);
+      lastTimestamp = nowTime;
+
+      if (isAutoDirector) {
+        directorTimerSec += dt;
+        const cycle = directorTimerSec % 70;
+        if (!isFlightActiveMode) {
+          if (cycle < 40) activeCameraShot = 'northpole';
+          else if (cycle < 55) activeCameraShot = 'willax';
+          else activeCameraShot = 'orbital';
+        } else {
+          if (cycle < 42) activeCameraShot = 'willax';
+          else if (cycle < 56) activeCameraShot = 'northpole';
+          else activeCameraShot = 'orbital';
+        }
+      }
+
+      elvesList.forEach(elfObj => {
+        elfObj.mesh.position.y = Math.abs(Math.sin(nowTime * 0.005 + elfObj.phase)) * 0.022;
+        elfObj.arms.rotation.z = Math.sin(nowTime * 0.006 + elfObj.phase) * 0.22;
+      });
+
+      if (!isFlightActiveMode) {
+        workshopPrepGroup.visible = true;
+        plannedRouteLine.visible = false;
+        activeRouteLine.visible = false;
+
+        santaFlightGroup.position.set(0.18, GLOBE_RADIUS * 0.955 + 0.51, 0.25);
+        santaFlightGroup.rotation.set(0, 0.22, 0);
+        sleighSubGroup.rotation.set(0, 0, 0);
+
+        santaGroup.scale.set(1.55, 1.55, 1.55);
+        santaGroup.position.set(-1.55, 0.05 + Math.abs(Math.sin(nowTime * 0.003)) * 0.03, 1.45);
+        santaGroup.rotation.y = 0.85 + Math.sin(nowTime * 0.0015) * 0.25;
+
+        giftTrail.forEach(g => g.mesh.visible = false);
+
+        reindeerSquad.forEach(d => {
+          d.position.y = Math.sin(nowTime * 0.003 + d.userData.offset) * 0.015;
+          d.userData.legs.forEach(leg => leg.rotation.z = 0);
+        });
+
+        if (activeCameraShot === 'northpole') {
+          const camX = Math.sin(nowTime * 0.00025) * 1.4;
+          camera.position.lerp(new THREE.Vector3(camX, 7.05, 4.75), 0.03);
+          camera.lookAt(new THREE.Vector3(0, 5.25, 0));
+        } else if (activeCameraShot === 'willax') {
+          camera.position.lerp(new THREE.Vector3(1.15, 6.25, 2.35), 0.04);
+          camera.lookAt(new THREE.Vector3(0.05, 5.38, 0.25));
+        } else if (activeCameraShot === 'orbital') {
+          const orbX = Math.sin(nowTime * 0.0002) * 8.5;
+          const orbZ = Math.cos(nowTime * 0.0002) * 11.5;
+          camera.position.lerp(new THREE.Vector3(orbX, 5.6, orbZ), 0.025);
+          camera.lookAt(new THREE.Vector3(0, 1.2, 0));
+        } else {
+          controls.update();
+        }
+
+      } else {
+        workshopPrepGroup.visible = false;
+        plannedRouteLine.visible = true;
+        activeRouteLine.visible = true;
+
+        santaGroup.scale.set(1.12, 1.12, 1.12);
+        santaGroup.position.set(-0.1, 0.88, 0);
+        santaGroup.rotation.set(0, 0, 0);
+
+        const currentWP = waypoints3D[currentIndex];
+        const nextWP = waypoints3D[(currentIndex + 1) % waypoints3D.length];
+
+        flightProgress += (dt / 18);
+        if (flightProgress >= 1) {
+          flightProgress = 0;
+          currentIndex = (currentIndex + 1) % WAYPOINTS.length;
+          updateFlightHUDData();
+        }
+
+        const curPos = new THREE.Vector3().lerpVectors(currentWP, nextWP, flightProgress).normalize();
+        curPos.multiplyScalar(ROUTE_ALTITUDE + Math.sin(flightProgress * Math.PI) * 0.45);
+        santaFlightGroup.position.copy(curPos);
+
+        const forwardDir = nextWP.clone().sub(currentWP).normalize();
+        const upDir = curPos.clone().normalize();
+        const rightDir = new THREE.Vector3().crossVectors(forwardDir, upDir).normalize();
+        const orthoForward = new THREE.Vector3().crossVectors(upDir, rightDir).normalize();
+        const rotMat = new THREE.Matrix4().makeBasis(orthoForward, upDir, rightDir);
+        santaFlightGroup.quaternion.setFromRotationMatrix(rotMat);
+
+        sleighSubGroup.rotation.z = Math.sin(nowTime * 0.003) * 0.04;
+        activeRouteGeo.setFromPoints(getGeodesicArc(curPos, nextWP, 25, 0.12));
+
+        reindeerSquad.forEach(d => {
+          const gallop = Math.sin(nowTime * 0.009 + d.userData.offset);
+          d.position.y = Math.sin(nowTime * 0.007 + d.userData.offset) * 0.06;
+          d.userData.legs[0].rotation.z = gallop * 0.65;
+          d.userData.legs[1].rotation.z = -gallop * 0.65;
+          d.userData.legs[2].rotation.z = -gallop * 0.65;
+          d.userData.legs[3].rotation.z = gallop * 0.65;
+        });
+
+        giftTrail.forEach(g => {
+          g.mesh.visible = true;
+          g.mesh.position.set(g.baseX, g.offsetY + Math.sin(nowTime * 0.004 + g.phase) * 0.14, g.offsetZ);
+          g.mesh.rotation.x += 0.02; g.mesh.rotation.y += 0.03;
+        });
+
+        if (activeCameraShot === 'willax') {
+          const lookTarget = curPos.clone().add(orthoForward.clone().multiplyScalar(0.3));
+          const targetCamPos = curPos.clone()
+            .add(rightDir.clone().multiplyScalar(3.3))
+            .add(upDir.clone().multiplyScalar(1.45))
+            .add(orthoForward.clone().multiplyScalar(-0.9));
+          camera.position.lerp(targetCamPos, 0.05);
+          camera.lookAt(lookTarget);
+        } else if (activeCameraShot === 'northpole') {
+          camera.position.lerp(new THREE.Vector3(0, 6.8, 6.4), 0.035);
+          camera.lookAt(new THREE.Vector3(0, 4.9, 0));
+        } else if (activeCameraShot === 'orbital') {
+          const orbitalPos = curPos.clone().normalize().multiplyScalar(13.8).add(new THREE.Vector3(0, 2.2, 0));
+          camera.position.lerp(orbitalPos, 0.03);
+          camera.lookAt(new THREE.Vector3(0, 0, 0));
+        } else {
+          controls.update();
+        }
+      }
+
+      const radarScale = 1 + (Math.sin(nowTime * 0.005) + 1) * 0.8;
+      radarRings.forEach(r => { r.scale.set(radarScale, radarScale, 1); r.material.opacity = Math.max(0.1, 1 - (radarScale / 2.6)); });
+
+      const now = new Date();
+      const currentSec = now.getSeconds();
+      if (currentSec !== lastUiSecond) {
+        lastUiSecond = currentSec;
+        const peruTime = updatePeruChristmasCountdown(now);
+        document.getElementById('hud-peru-time').textContent = peruTime.formatted;
+
+        if (isFlightActiveMode) {
+          const localCityTime = getZonedDateParts(now, WAYPOINTS[currentIndex].timeZone);
+          document.getElementById('hud-local-time').textContent = localCityTime.formatted;
+        }
+      }
+
+      snowElements.forEach(s => {
+        s.y += s.vy; s.x += Math.sin(nowTime * 0.002 + s.sway) * 0.5;
+        if (s.y > window.innerHeight) { s.y = -10; s.x = Math.random() * window.innerWidth; }
+        s.el.style.transform = `translate3d(${s.x}px, ${s.y}px, 0)`;
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      applyCameraScreenOffset();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    initScenePosition();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
